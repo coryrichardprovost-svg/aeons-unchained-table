@@ -1,0 +1,307 @@
+-- Development reset for Aeons Unchained Table.
+-- This wipes local/test Supabase app data and Auth users, then rebuilds a clean schema.
+-- Do not run this against a production project.
+--
+-- After running, create accounts normally through the app.
+
+drop trigger if exists on_auth_user_created on auth.users;
+drop schema if exists public cascade;
+create schema public;
+
+create extension if not exists pgcrypto;
+
+grant usage on schema public to postgres, anon, authenticated, service_role;
+grant all on schema public to postgres, service_role;
+alter default privileges in schema public grant all on tables to postgres, service_role;
+alter default privileges in schema public grant all on functions to postgres, service_role;
+alter default privileges in schema public grant all on sequences to postgres, service_role;
+alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
+alter default privileges in schema public grant usage, select on sequences to authenticated;
+alter default privileges in schema public grant execute on functions to anon, authenticated;
+
+delete from auth.identities;
+delete from auth.users;
+
+create table public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text unique not null,
+  display_name text not null,
+  email text unique not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.user_roles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  role text not null check (role in ('trailblazer', 'chronicler')),
+  created_at timestamptz not null default now(),
+  unique (user_id, role)
+);
+
+create table public.campaigns (
+  id uuid primary key default gen_random_uuid(),
+  dm_user_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null,
+  status text not null default 'draft' check (status in ('draft', 'recruiting', 'active', 'archived')),
+  premise text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.characters (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null references public.profiles(id) on delete cascade,
+  campaign_id uuid references public.campaigns(id) on delete set null,
+  name text not null,
+  class_name text not null default 'Unchosen Class',
+  level integer not null default 1 check (level >= 1),
+  ancestry text not null default '',
+  background text not null default '',
+  resolve_current integer not null default 10 check (resolve_current >= 0),
+  resolve_max integer not null default 10 check (resolve_max >= 0),
+  wounds integer not null default 0 check (wounds >= 0),
+  notes text not null default '',
+  attributes jsonb not null default '{
+    "str": 10,
+    "spd": 10,
+    "int": 10,
+    "cha": 10,
+    "con": 10,
+    "dex": 10,
+    "wis": 10,
+    "fth": 10
+  }'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.campaign_invites (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.campaigns(id) on delete cascade,
+  invited_by_user_id uuid not null references public.profiles(id) on delete cascade,
+  invited_username text not null,
+  invited_user_id uuid references public.profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined', 'expired')),
+  created_at timestamptz not null default now(),
+  responded_at timestamptz
+);
+
+create table public.campaign_members (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.campaigns(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  character_id uuid references public.characters(id) on delete set null,
+  role text not null check (role in ('chronicler', 'trailblazer', 'observer')),
+  created_at timestamptz not null default now(),
+  unique (campaign_id, user_id)
+);
+
+grant select on public.campaigns to authenticated;
+grant select, insert, update, delete on public.characters to authenticated;
+grant select on public.campaign_members to authenticated;
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger profiles_set_updated_at
+before update on public.profiles
+for each row execute function public.set_updated_at();
+
+create trigger campaigns_set_updated_at
+before update on public.campaigns
+for each row execute function public.set_updated_at();
+
+create trigger characters_set_updated_at
+before update on public.characters
+for each row execute function public.set_updated_at();
+
+create or replace function public.handle_new_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  requested_username text;
+  clean_username text;
+  requested_role text;
+  clean_role text;
+begin
+  requested_username := coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1));
+  clean_username := lower(trim(requested_username));
+  requested_role := coalesce(new.raw_user_meta_data ->> 'role', 'trailblazer');
+  clean_role := case
+    when clean_username = 'the chronicler' and lower(trim(requested_role)) = 'chronicler' then 'chronicler'
+    else 'trailblazer'
+  end;
+
+  insert into public.profiles (id, username, display_name, email)
+  values (new.id, clean_username, clean_username, lower(new.email))
+  on conflict (id) do update
+  set
+    username = excluded.username,
+    display_name = excluded.display_name,
+    email = excluded.email;
+
+  insert into public.user_roles (user_id, role)
+  values (new.id, clean_role)
+  on conflict (user_id, role) do nothing;
+
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute function public.handle_new_auth_user();
+
+create or replace function public.get_email_for_username(input_username text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select email
+  from public.profiles
+  where username = lower(trim(input_username))
+  limit 1;
+$$;
+
+grant execute on function public.get_email_for_username(text) to anon;
+grant execute on function public.get_email_for_username(text) to authenticated;
+
+alter table public.profiles enable row level security;
+alter table public.user_roles enable row level security;
+alter table public.campaigns enable row level security;
+alter table public.characters enable row level security;
+alter table public.campaign_invites enable row level security;
+alter table public.campaign_members enable row level security;
+
+create policy "profiles are readable by authenticated users"
+on public.profiles for select
+to authenticated
+using (true);
+
+create policy "users can create their own profile"
+on public.profiles for insert
+to authenticated
+with check (auth.uid() = id);
+
+create policy "users can update their own profile"
+on public.profiles for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
+
+create policy "users can read their own roles"
+on public.user_roles for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "users can create their own roles"
+on public.user_roles for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "dms can create campaigns"
+on public.campaigns for insert
+to authenticated
+with check (auth.uid() = dm_user_id);
+
+create policy "campaign owners can manage campaigns"
+on public.campaigns for all
+to authenticated
+using (auth.uid() = dm_user_id)
+with check (auth.uid() = dm_user_id);
+
+create policy "players can manage their own characters"
+on public.characters for all
+to authenticated
+using (auth.uid() = owner_user_id)
+with check (auth.uid() = owner_user_id);
+
+create policy "campaign owners can read campaign characters"
+on public.characters for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.campaigns
+    where campaigns.id = characters.campaign_id
+      and campaigns.dm_user_id = auth.uid()
+  )
+);
+
+create policy "campaign owners can manage invites"
+on public.campaign_invites for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.campaigns
+    where campaigns.id = campaign_invites.campaign_id
+      and campaigns.dm_user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.campaigns
+    where campaigns.id = campaign_invites.campaign_id
+      and campaigns.dm_user_id = auth.uid()
+  )
+);
+
+create policy "users can read invites addressed to them"
+on public.campaign_invites for select
+to authenticated
+using (
+  invited_user_id = auth.uid()
+  or invited_username = (
+    select username from public.profiles where id = auth.uid()
+  )
+);
+
+create policy "campaign members can read their memberships"
+on public.campaign_members for select
+to authenticated
+using (
+  user_id = auth.uid()
+  or exists (
+    select 1
+    from public.campaigns
+    where campaigns.id = campaign_members.campaign_id
+      and campaigns.dm_user_id = auth.uid()
+  )
+);
+
+create policy "campaign owners can manage memberships"
+on public.campaign_members for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.campaigns
+    where campaigns.id = campaign_members.campaign_id
+      and campaigns.dm_user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.campaigns
+    where campaigns.id = campaign_members.campaign_id
+      and campaigns.dm_user_id = auth.uid()
+  )
+);
+
+notify pgrst, 'reload schema';
