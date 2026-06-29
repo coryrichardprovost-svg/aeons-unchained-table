@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ChroniclerClassesPage } from "@/components/chronicler-classes-page";
+import { ChroniclerWorldAtlasPage } from "@/components/chronicler-world-atlas-page";
 import { DetailPage, TablePage } from "@/components/detail-page";
 import { StagePage } from "@/components/stage-page";
 import { WorkspaceShell } from "@/components/workspace-shell";
@@ -121,21 +122,7 @@ function DmContent({ view }: { view: DmView }) {
     );
   }
 
-  if (view === "world") {
-    return (
-      <DetailPage
-        mainTitle="World Builder Modules"
-        items={[
-          ["Maps and Landscapes", "Grid-ready scenes the Chronicler can place on the stage."],
-          ["Regions", "Regional lore, pricing rules, travel notes, and location state."],
-          ["Public Knowledge Exports", "Lore that can be pushed into Trailblazer knowledge tabs."],
-          ["Private World Notes", "Chronicler-only material for future reveals."],
-        ]}
-        sideTitle="Next Builder Needs"
-        sideItems={["Map canvas", "Grid toggle", "Region records", "Location visibility"]}
-      />
-    );
-  }
+  if (view === "world") return <ChroniclerWorldAtlasPage />;
 
   if (view === "npcs") {
     return (
