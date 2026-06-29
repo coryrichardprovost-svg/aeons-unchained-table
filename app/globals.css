@@ -763,6 +763,51 @@ h1 {
   align-items: start;
 }
 
+.classes-dashboard,
+.class-detail-page {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.classes-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.class-dashboard-card {
+  min-height: 156px;
+  display: grid;
+  align-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.045);
+}
+
+.class-dashboard-card:hover {
+  border-color: rgba(66, 180, 168, 0.55);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.class-dashboard-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 20px;
+}
+
+.class-dashboard-card span:not(.tag) {
+  color: var(--muted);
+}
+
+.class-dashboard-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .class-builder-message {
   grid-column: 1 / -1;
 }
@@ -781,6 +826,12 @@ h1 {
 .class-editor-grid {
   display: grid;
   grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  gap: 14px;
+}
+
+.class-detail-heading {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.65fr) minmax(0, 1.35fr);
   gap: 14px;
 }
 
@@ -844,9 +895,9 @@ h1 {
 }
 
 .class-feature-row {
-  min-width: 620px;
+  min-width: 860px;
   display: grid;
-  grid-template-columns: minmax(140px, 0.8fr) minmax(260px, 1.5fr) 86px;
+  grid-template-columns: minmax(120px, 0.55fr) minmax(170px, 0.9fr) minmax(340px, 1.65fr) 128px;
 }
 
 .class-feature-head {

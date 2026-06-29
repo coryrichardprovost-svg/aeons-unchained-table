@@ -1,6 +1,7 @@
 export type AttributeBonusKey = "str" | "spd" | "int" | "cha" | "con" | "dex" | "wis" | "fth";
 
 export type ClassFeature = {
+  slot: string;
   name: string;
   description: string;
   level: string;
@@ -28,6 +29,7 @@ export const attributeBonusKeys: AttributeBonusKey[] = ["str", "spd", "int", "ch
 
 export function createBlankFeature(): ClassFeature {
   return {
+    slot: "",
     name: "",
     description: "",
     level: "1",

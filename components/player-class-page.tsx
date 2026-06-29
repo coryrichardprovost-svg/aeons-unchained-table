@@ -259,7 +259,7 @@ function FeatureList({ title, features }: { title: string; features: ClassFeatur
           <div className="class-read-feature" key={`${feature.name}-${index}`}>
             <div>
               <strong>{feature.name || "Unnamed"}</strong>
-              <span>Level {feature.level}</span>
+              <span>{feature.slot ? `${feature.slot} / ` : ""}Level {feature.level}</span>
             </div>
             <p className="subcopy">{feature.description || "No description yet."}</p>
           </div>
