@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
 type WorldLocation = {
@@ -233,17 +234,39 @@ export function ChroniclerWorldAtlasPage() {
             </button>
           </div>
 
-          <AtlasSelect label="Continent" value={continentId} disabled={false} locations={continents} onChange={chooseContinent} />
-          <AtlasSelect label="Region" value={regionId} disabled={!continentId} locations={regions} onChange={chooseRegion} />
-          <AtlasSelect label="City, Town, or Place" value={placeId} disabled={!regionId} locations={places} onChange={choosePlace} />
+          <AtlasSelect
+            label="Continent"
+            value={continentId}
+            disabled={false}
+            locations={continents}
+            onChange={chooseContinent}
+            onCurrentClick={() => setSelectedId(continentId)}
+          />
+          <AtlasSelect
+            label="Region"
+            value={regionId}
+            disabled={!continentId}
+            locations={regions}
+            onChange={chooseRegion}
+            onCurrentClick={() => setSelectedId(regionId || continentId)}
+          />
+          <AtlasSelect
+            label="City, Town, or Place"
+            value={placeId}
+            disabled={!regionId}
+            locations={places}
+            onChange={choosePlace}
+            onCurrentClick={() => setSelectedId(placeId || regionId || continentId)}
+          />
           <AtlasSelect
             label="Specific Location"
-            value={selectedId}
+            value={specificLocations.some((location) => location.id === selectedId) ? selectedId : ""}
             disabled={!placeId}
             locations={specificLocations}
             placeholder={placeId ? "Use selected place" : "Choose Location"}
             fallbackValue=""
             onChange={chooseSpecificLocation}
+            onCurrentClick={() => setSelectedId(selectedId || placeId || regionId || continentId)}
           />
 
           <span className="tag teal">{isLoading ? "Loading" : `${locations.length} saved areas`}</span>
@@ -340,6 +363,7 @@ function AtlasSelect({
   locations,
   disabled,
   onChange,
+  onCurrentClick,
   placeholder = "Choose",
   fallbackValue = "",
 }: {
@@ -348,13 +372,26 @@ function AtlasSelect({
   locations: WorldLocation[];
   disabled: boolean;
   onChange: (locationId: string) => void;
+  onCurrentClick: () => void;
   placeholder?: string;
   fallbackValue?: string;
 }) {
+  function handleMouseDown(event: MouseEvent<HTMLSelectElement>) {
+    if (!value || disabled) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const clickedArrowZone = event.clientX >= bounds.right - 42;
+
+    if (!clickedArrowZone) {
+      event.preventDefault();
+      onCurrentClick();
+    }
+  }
+
   return (
     <label className="atlas-rail-select">
       <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
+      <select value={value} onMouseDown={handleMouseDown} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
         <option value={fallbackValue}>{placeholder}</option>
         {locations.map((location) => (
           <option key={location.id} value={location.id}>
