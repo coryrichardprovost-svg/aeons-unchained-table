@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { DetailPage, TablePage } from "@/components/detail-page";
+import { DetailPage } from "@/components/detail-page";
+import { InventoryPage } from "@/components/inventory-page";
 import { PlayerCharacterDashboard } from "@/components/player-character-dashboard";
 import { StagePage } from "@/components/stage-page";
 import { WorkspaceShell } from "@/components/workspace-shell";
-import { abilities, craftingProjects, inventoryItems, knowledgeEntries, recentNotes } from "@/data/sample-data";
+import { abilities, craftingProjects, knowledgeEntries, recentNotes } from "@/data/sample-data";
 
 const titles = {
   sheet: {
@@ -64,7 +65,7 @@ export default async function TrailblazerRoutePage({ params }: { params: Promise
 
 function TrailblazerContent({ view }: { view: TrailblazerView }) {
   if (view === "sheet") return <SheetPage />;
-  if (view === "inventory") return <TablePage title="Inventory" rows={inventoryItems} tag="Item / Type / Status" />;
+  if (view === "inventory") return <InventoryPage />;
   if (view === "class") {
     return (
       <DetailPage

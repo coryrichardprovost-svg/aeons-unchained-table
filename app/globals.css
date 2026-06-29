@@ -621,6 +621,132 @@ h1 {
   border-radius: 6px;
 }
 
+.inventory-workspace {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.inventory-backpack-panel,
+.inventory-table-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.inventory-backpack-panel {
+  padding: 16px;
+}
+
+.inventory-backpack-panel label {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.inventory-backpack-panel span {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.inventory-backpack-panel input,
+.inventory-table input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(244, 239, 226, 0.045);
+  color: var(--ink);
+  outline: none;
+}
+
+.inventory-backpack-panel input {
+  min-height: 44px;
+  padding: 9px 12px;
+  font-size: 18px;
+}
+
+.inventory-backpack-panel input:focus,
+.inventory-table input:focus {
+  border-color: rgba(66, 180, 168, 0.72);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.inventory-table-panel {
+  overflow: hidden;
+}
+
+.inventory-table-header {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.inventory-table {
+  overflow-x: auto;
+}
+
+.inventory-table-head,
+.inventory-table-row {
+  min-width: 1040px;
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) minmax(280px, 1.55fr) minmax(140px, 0.75fr) 84px 84px 104px;
+}
+
+.inventory-table-head {
+  background: rgba(244, 239, 226, 0.075);
+  color: var(--gold);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.inventory-table-head strong,
+.inventory-table-row input,
+.inventory-table-row output {
+  min-height: 42px;
+  display: grid;
+  align-items: center;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.inventory-table-head strong {
+  padding: 0 10px;
+}
+
+.inventory-table-head strong:last-child,
+.inventory-table-row output {
+  border-right: 0;
+}
+
+.inventory-table-row input {
+  border-top: 0;
+  border-left: 0;
+  border-radius: 0;
+  padding: 0 10px;
+}
+
+.inventory-table-row input[inputmode="numeric"],
+.inventory-table-row input[inputmode="decimal"],
+.inventory-table-row output {
+  text-align: center;
+}
+
+.inventory-table-row output {
+  padding: 0 10px;
+  color: var(--muted);
+  background: rgba(17, 16, 14, 0.22);
+}
+
 ul {
   padding: 0;
   margin: 0;
