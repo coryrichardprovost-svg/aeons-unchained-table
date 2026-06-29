@@ -262,13 +262,7 @@ function FeatureEditor({
             <span>{index + 1}</span>
             <input value={feature.name} onChange={(event) => onChange(index, { ...feature, name: event.target.value })} />
             <input value={feature.description} onChange={(event) => onChange(index, { ...feature, description: event.target.value })} />
-            <select value={feature.level} onChange={(event) => onChange(index, { ...feature, level: event.target.value })}>
-              {["1", "2", "3", "4", "5"].map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
+            <input inputMode="numeric" value={feature.level} onChange={(event) => onChange(index, { ...feature, level: formatNumberText(event.target.value) })} />
             <input inputMode="numeric" value={feature.mpCost} onChange={(event) => onChange(index, { ...feature, mpCost: formatNumberText(event.target.value) })} />
             <input inputMode="numeric" value={feature.spCost} onChange={(event) => onChange(index, { ...feature, spCost: formatNumberText(event.target.value) })} />
           </div>
