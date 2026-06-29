@@ -18,22 +18,7 @@ type WorldLocation = {
   visibility: "chronicler" | "players";
 };
 
-const locationTypes = [
-  "Continent",
-  "Region",
-  "Kingdom / Nation",
-  "Province",
-  "City",
-  "Town",
-  "Village",
-  "District",
-  "Landmark",
-  "Wilderness",
-  "Dungeon",
-  "Shop",
-  "Building",
-  "Point of Interest",
-];
+const locationTypes = ["Continent", "Region", "City", "Town", "Village", "District", "Landmark", "Wilderness", "Dungeon", "Building", "Point of Interest"];
 
 export function ChroniclerWorldAtlasPage() {
   const [locations, setLocations] = useState<WorldLocation[]>([]);
@@ -41,6 +26,7 @@ export function ChroniclerWorldAtlasPage() {
   const [regionId, setRegionId] = useState("");
   const [placeId, setPlaceId] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [isBackendOpen, setIsBackendOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const hasLoadedAutoSave = useRef(false);
@@ -61,7 +47,7 @@ export function ChroniclerWorldAtlasPage() {
     () => locations.filter((location) => location.parent_location_id === regionId),
     [locations, regionId],
   );
-  const nestedLocations = useMemo(
+  const specificLocations = useMemo(
     () => locations.filter((location) => location.parent_location_id === placeId),
     [locations, placeId],
   );
@@ -91,7 +77,7 @@ export function ChroniclerWorldAtlasPage() {
   }, [loadLocations]);
 
   useEffect(() => {
-    if (!selectedLocation) return;
+    if (!selectedLocation || !isBackendOpen) return;
 
     if (!hasLoadedAutoSave.current) {
       hasLoadedAutoSave.current = true;
@@ -100,20 +86,16 @@ export function ChroniclerWorldAtlasPage() {
 
     const saveTimer = window.setTimeout(async () => {
       const supabase = createClient();
-      setMessage("Saving location...");
+      setMessage("Saving area...");
 
       const { error } = await supabase
         .from("world_locations")
         .update({
           parent_location_id: selectedLocation.parent_location_id,
-          name: selectedLocation.name.trim() || "Unnamed Location",
+          name: selectedLocation.name.trim() || "Unnamed Area",
           location_type: selectedLocation.location_type,
           public_description: selectedLocation.public_description,
           chronicler_notes: selectedLocation.chronicler_notes,
-          factions: selectedLocation.factions,
-          npcs: selectedLocation.npcs,
-          quests: selectedLocation.quests,
-          resources: selectedLocation.resources,
           visibility: selectedLocation.visibility,
         })
         .eq("id", selectedLocation.id);
@@ -123,11 +105,11 @@ export function ChroniclerWorldAtlasPage() {
         return;
       }
 
-      setMessage("Location saved.");
+      setMessage("Area saved.");
     }, 700);
 
     return () => window.clearTimeout(saveTimer);
-  }, [selectedLocation]);
+  }, [isBackendOpen, selectedLocation]);
 
   async function createLocation(locationType: string, parentLocationId: string | null) {
     const supabase = createClient();
@@ -154,6 +136,7 @@ export function ChroniclerWorldAtlasPage() {
     const savedLocation = data as WorldLocation;
     setLocations((current) => [...current, savedLocation].sort((left, right) => left.name.localeCompare(right.name)));
     selectLocation(savedLocation);
+    setIsBackendOpen(true);
     setMessage(`${locationType} created.`);
   }
 
@@ -170,10 +153,6 @@ export function ChroniclerWorldAtlasPage() {
     setRegionId(path[1]?.id || "");
     setPlaceId(path[2]?.id || "");
     setSelectedId(location.id);
-  }
-
-  function updateSelectedLocation(nextLocation: WorldLocation) {
-    setLocations((current) => current.map((location) => (location.id === nextLocation.id ? nextLocation : location)));
   }
 
   function chooseContinent(nextContinentId: string) {
@@ -197,122 +176,134 @@ export function ChroniclerWorldAtlasPage() {
     setSelectedId(nextPlaceId);
   }
 
+  function updateSelectedLocation(nextLocation: WorldLocation) {
+    setLocations((current) => current.map((location) => (location.id === nextLocation.id ? nextLocation : location)));
+  }
+
   return (
-    <div className="atlas-workspace">
+    <div className="atlas-dashboard">
       {message ? <p className="form-message atlas-message">{message}</p> : null}
 
-      <section className="atlas-browser-panel">
-        <div className="list-header">
-          <h3>Atlas Browser</h3>
-          <span className="tag teal">{isLoading ? "Loading" : `${locations.length} records`}</span>
+      <section className="atlas-hero-panel">
+        <div className="atlas-map-frame">
+          <div className="atlas-map-overlay">
+            <span className="eyebrow">World Atlas</span>
+            <h3>{selectedLocation?.name || "Choose an Area"}</h3>
+            <p>{selectedLocation?.location_type || "Nate's world map and area art will live here."}</p>
+          </div>
         </div>
 
-        <div className="atlas-filter-grid">
-          <label>
-            <span>Continent</span>
-            <select value={continentId} onChange={(event) => chooseContinent(event.target.value)}>
-              <option value="">Choose Continent</option>
-              {continents.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <aside className="atlas-selector-rail">
+          <div className="list-header">
+            <h3>Browse</h3>
+            <button className="secondary-button compact-action" onClick={() => setIsBackendOpen((current) => !current)}>
+              {isBackendOpen ? "Close Backend" : "Open Backend"}
+            </button>
+          </div>
 
-          <label>
-            <span>Region</span>
-            <select value={regionId} onChange={(event) => chooseRegion(event.target.value)} disabled={!continentId}>
-              <option value="">Choose Region</option>
-              {regions.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <AtlasSelect label="Continent" value={continentId} disabled={false} locations={continents} onChange={chooseContinent} />
+          <AtlasSelect label="Region" value={regionId} disabled={!continentId} locations={regions} onChange={chooseRegion} />
+          <AtlasSelect label="City, Town, or Place" value={placeId} disabled={!regionId} locations={places} onChange={choosePlace} />
+          <AtlasSelect
+            label="Specific Location"
+            value={selectedId}
+            disabled={!placeId}
+            locations={specificLocations}
+            placeholder={placeId ? "Use selected place" : "Choose Location"}
+            fallbackValue={placeId}
+            onChange={(locationId) => selectLocation(locations.find((location) => location.id === locationId) || null)}
+          />
 
-          <label>
-            <span>City / Town / Place</span>
-            <select value={placeId} onChange={(event) => choosePlace(event.target.value)} disabled={!regionId}>
-              <option value="">Choose Place</option>
-              {places.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name} ({location.location_type})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Specific Location</span>
-            <select value={selectedId} onChange={(event) => selectLocation(locations.find((location) => location.id === event.target.value) || null)} disabled={!placeId}>
-              <option value={placeId || ""}>{placeId ? "Use selected place" : "Choose Location"}</option>
-              {nestedLocations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name} ({location.location_type})
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="atlas-actions">
-          <button className="primary-inline-button" onClick={() => createLocation("Continent", null)}>
-            New Continent
-          </button>
-          <button className="secondary-button" onClick={() => createLocation("Region", continentId || null)} disabled={!continentId}>
-            New Region
-          </button>
-          <button className="secondary-button" onClick={() => createLocation("City", regionId || null)} disabled={!regionId}>
-            New Place
-          </button>
-          <button className="secondary-button" onClick={() => createLocation("Point of Interest", placeId || selectedId || null)} disabled={!selectedId}>
-            New Detail
-          </button>
-        </div>
+          <span className="tag teal">{isLoading ? "Loading" : `${locations.length} saved areas`}</span>
+        </aside>
       </section>
 
-      <section className="atlas-layout">
-        <aside className="atlas-tree-panel">
-          <div className="list-header">
-            <h3>Current Branch</h3>
-            <span className="tag gold">Nested</span>
-          </div>
-          <div className="atlas-tree-list">
-            {getVisibleBranch(locations, continentId, regionId, placeId).map((location) => (
-              <button
-                className={`atlas-tree-item ${location.id === selectedId ? "active" : ""}`}
-                key={location.id}
-                onClick={() => selectLocation(location)}
-              >
-                <strong>{location.name}</strong>
-                <span>{location.location_type}</span>
-              </button>
-            ))}
-            {!continentId ? (
-              <div className="empty-state">
-                <strong>No branch selected.</strong>
-                <span>Create or choose a continent to begin browsing.</span>
-              </div>
-            ) : null}
-          </div>
-        </aside>
-
+      <section className="atlas-info-panel">
+        <div className="list-header">
+          <h3>{selectedLocation?.name || "Area Information"}</h3>
+          <span className="tag gold">{selectedLocation?.location_type || "No area selected"}</span>
+        </div>
         {selectedLocation ? (
-          <LocationEditor
-            location={selectedLocation}
-            locations={locations}
-            onChange={updateSelectedLocation}
-          />
+          <div className="atlas-info-grid">
+            <div>
+              <strong>Area Info</strong>
+              <p className="subcopy">{selectedLocation.chronicler_notes || "No area information has been written yet."}</p>
+            </div>
+            <div>
+              <strong>Description</strong>
+              <p className="subcopy">{selectedLocation.public_description || "No description has been written yet."}</p>
+            </div>
+          </div>
         ) : (
-          <section className="detail-panel atlas-editor-panel">
-            <h3>Select a Location</h3>
-            <p className="subcopy">Choose a place from the Atlas browser or create a new continent to start building the world.</p>
-          </section>
+          <p className="subcopy">Choose a continent, region, place, or specific location to view its information.</p>
         )}
       </section>
+
+      {isBackendOpen ? (
+        <section className="atlas-backend-panel">
+          <div className="list-header">
+            <h3>Atlas Backend</h3>
+            <span className="tag teal">Autosaves selected area</span>
+          </div>
+
+          <div className="atlas-actions">
+            <button className="primary-inline-button" onClick={() => createLocation("Continent", null)}>
+              New Continent
+            </button>
+            <button className="secondary-button" onClick={() => createLocation("Region", continentId || null)} disabled={!continentId}>
+              New Region
+            </button>
+            <button className="secondary-button" onClick={() => createLocation("City", regionId || null)} disabled={!regionId}>
+              New City / Town / Place
+            </button>
+            <button className="secondary-button" onClick={() => createLocation("Point of Interest", placeId || selectedId || null)} disabled={!selectedId}>
+              New Specific Location
+            </button>
+          </div>
+
+          {selectedLocation ? (
+            <LocationEditor location={selectedLocation} locations={locations} onChange={updateSelectedLocation} />
+          ) : (
+            <div className="empty-state">
+              <strong>No area selected.</strong>
+              <span>Create or choose an area before editing.</span>
+            </div>
+          )}
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+function AtlasSelect({
+  label,
+  value,
+  locations,
+  disabled,
+  onChange,
+  placeholder = "Choose",
+  fallbackValue = "",
+}: {
+  label: string;
+  value: string;
+  locations: WorldLocation[];
+  disabled: boolean;
+  onChange: (locationId: string) => void;
+  placeholder?: string;
+  fallbackValue?: string;
+}) {
+  return (
+    <label className="atlas-rail-select">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
+        <option value={fallbackValue}>{placeholder}</option>
+        {locations.map((location) => (
+          <option key={location.id} value={location.id}>
+            {location.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -326,12 +317,7 @@ function LocationEditor({
   onChange: (location: WorldLocation) => void;
 }) {
   return (
-    <section className="detail-panel atlas-editor-panel">
-      <div className="list-header">
-        <h3>Location Details</h3>
-        <span className="tag teal">Autosaves</span>
-      </div>
-
+    <div className="atlas-editor-simple">
       <div className="atlas-editor-grid">
         <label className="field">
           <span>Name</span>
@@ -348,7 +334,7 @@ function LocationEditor({
           </select>
         </label>
         <label className="field">
-          <span>Parent Location</span>
+          <span>Parent Area</span>
           <select value={location.parent_location_id || ""} onChange={(event) => onChange({ ...location, parent_location_id: event.target.value || null })}>
             <option value="">No Parent</option>
             {locations
@@ -368,37 +354,17 @@ function LocationEditor({
           </select>
         </label>
       </div>
-
       <div className="atlas-notes-grid">
         <label className="field">
-          <span>Public Description</span>
-          <textarea value={location.public_description} onChange={(event) => onChange({ ...location, public_description: event.target.value })} />
-        </label>
-        <label className="field">
-          <span>Chronicler Private Notes</span>
+          <span>Area Info</span>
           <textarea value={location.chronicler_notes} onChange={(event) => onChange({ ...location, chronicler_notes: event.target.value })} />
         </label>
-      </div>
-
-      <div className="atlas-editor-grid">
         <label className="field">
-          <span>Important NPCs</span>
-          <textarea value={location.npcs} onChange={(event) => onChange({ ...location, npcs: event.target.value })} />
-        </label>
-        <label className="field">
-          <span>Factions</span>
-          <textarea value={location.factions} onChange={(event) => onChange({ ...location, factions: event.target.value })} />
-        </label>
-        <label className="field">
-          <span>Quests</span>
-          <textarea value={location.quests} onChange={(event) => onChange({ ...location, quests: event.target.value })} />
-        </label>
-        <label className="field">
-          <span>Resources / Shops / Notes</span>
-          <textarea value={location.resources} onChange={(event) => onChange({ ...location, resources: event.target.value })} />
+          <span>Description</span>
+          <textarea value={location.public_description} onChange={(event) => onChange({ ...location, public_description: event.target.value })} />
         </label>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -412,15 +378,4 @@ function getLocationPath(location: WorldLocation, locations: WorldLocation[]) {
   }
 
   return path;
-}
-
-function getVisibleBranch(locations: WorldLocation[], continentId: string, regionId: string, placeId: string) {
-  const branchIds = [continentId, regionId, placeId].filter(Boolean);
-  const branchLocations = branchIds
-    .map((locationId) => locations.find((location) => location.id === locationId))
-    .filter((location): location is WorldLocation => Boolean(location));
-  const childParentId = placeId || regionId || continentId;
-  const childLocations = childParentId ? locations.filter((location) => location.parent_location_id === childParentId) : [];
-
-  return [...branchLocations, ...childLocations.filter((location) => !branchIds.includes(location.id))];
 }

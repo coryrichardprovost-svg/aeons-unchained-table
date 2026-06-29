@@ -754,7 +754,7 @@ h1 {
   background: rgba(17, 16, 14, 0.22);
 }
 
-.atlas-workspace {
+.atlas-dashboard {
   display: grid;
   gap: 16px;
   margin-top: 22px;
@@ -764,9 +764,9 @@ h1 {
   margin: 0;
 }
 
-.atlas-browser-panel,
-.atlas-tree-panel,
-.atlas-editor-panel {
+.atlas-hero-panel,
+.atlas-info-panel,
+.atlas-backend-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -774,33 +774,67 @@ h1 {
   backdrop-filter: blur(16px);
 }
 
-.atlas-browser-panel,
-.atlas-tree-panel,
-.atlas-editor-panel {
+.atlas-info-panel,
+.atlas-backend-panel {
   padding: 16px;
 }
 
-.atlas-filter-grid {
+.atlas-hero-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  min-height: 460px;
+  overflow: hidden;
 }
 
-.atlas-filter-grid label {
+.atlas-map-frame {
+  position: relative;
+  min-height: 460px;
+  display: grid;
+  align-items: end;
+  padding: 24px;
+  background:
+    linear-gradient(rgba(17, 16, 14, 0.18), rgba(17, 16, 14, 0.82)),
+    url("/assets/aeons-archive-banner.png") center / cover no-repeat;
+}
+
+.atlas-map-overlay {
+  display: grid;
+  gap: 8px;
+  width: min(720px, 100%);
+}
+
+.atlas-map-overlay h3 {
+  font-size: clamp(30px, 4vw, 58px);
+  line-height: 1;
+}
+
+.atlas-map-overlay p {
+  color: var(--muted);
+}
+
+.atlas-selector-rail {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px;
+  border-left: 1px solid var(--line);
+  background: rgba(17, 16, 14, 0.56);
+}
+
+.atlas-rail-select {
   display: grid;
   gap: 6px;
 }
 
-.atlas-filter-grid span {
+.atlas-rail-select span {
   color: var(--gold);
   font-size: 12px;
   font-weight: 850;
   text-transform: uppercase;
 }
 
-.atlas-filter-grid select,
-.atlas-editor-panel select {
+.atlas-rail-select select,
+.atlas-editor-simple select {
   min-height: 42px;
   width: 100%;
   border: 1px solid var(--line);
@@ -819,52 +853,34 @@ h1 {
 }
 
 .atlas-actions button:disabled,
-.atlas-filter-grid select:disabled {
+.atlas-rail-select select:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
-.atlas-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.32fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.atlas-tree-panel,
-.atlas-editor-panel {
+.atlas-info-panel {
   display: grid;
   gap: 14px;
 }
 
-.atlas-tree-list {
+.atlas-info-grid {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
 }
 
-.atlas-tree-item {
-  min-height: 62px;
+.atlas-info-grid > div {
   display: grid;
   gap: 4px;
-  align-content: center;
-  padding: 10px;
+  align-content: start;
+  min-height: 150px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(244, 239, 226, 0.045);
-  color: var(--ink);
-  text-align: left;
 }
 
-.atlas-tree-item.active {
-  border-color: rgba(66, 180, 168, 0.7);
-  background: rgba(66, 180, 168, 0.13);
-}
-
-.atlas-tree-item span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
+.atlas-editor-simple,
 .atlas-editor-grid,
 .atlas-notes-grid {
   display: grid;
@@ -872,8 +888,9 @@ h1 {
   gap: 14px;
 }
 
-.atlas-editor-grid textarea {
-  min-height: 110px;
+.atlas-editor-simple {
+  grid-template-columns: 1fr;
+  margin-top: 14px;
 }
 
 .atlas-notes-grid textarea {
@@ -2437,8 +2454,14 @@ ul {
   .character-select-layout,
   .class-builder-layout,
   .player-class-layout,
-  .atlas-layout {
+  .atlas-hero-panel,
+  .atlas-info-grid {
     grid-template-columns: 1fr;
+  }
+
+  .atlas-selector-rail {
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .sidebar {
@@ -2467,7 +2490,6 @@ ul {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .atlas-filter-grid,
   .atlas-editor-grid,
   .atlas-notes-grid {
     grid-template-columns: 1fr;
