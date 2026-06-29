@@ -29,6 +29,7 @@ export function ChroniclerWorldAtlasPage() {
   const [selectedId, setSelectedId] = useState("");
   const [isBackendOpen, setIsBackendOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorldLocation | null>(null);
+  const [newChildType, setNewChildType] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const hasLoadedAutoSave = useRef(false);
@@ -42,16 +43,25 @@ export function ChroniclerWorldAtlasPage() {
     [locations],
   );
   const regions = useMemo(
-    () => locations.filter((location) => location.parent_location_id === continentId),
+    () => locations.filter((location) => location.parent_location_id === continentId && getAllowedChildTypes("Continent").includes(location.location_type)),
     [continentId, locations],
   );
   const places = useMemo(
-    () => locations.filter((location) => location.parent_location_id === regionId),
+    () => locations.filter((location) => location.parent_location_id === regionId && getAllowedChildTypes("Region").includes(location.location_type)),
     [locations, regionId],
   );
   const specificLocations = useMemo(
-    () => locations.filter((location) => location.parent_location_id === placeId),
+    () => {
+      const parentLocation = locations.find((location) => location.id === placeId);
+      return locations.filter(
+        (location) => location.parent_location_id === placeId && getAllowedChildTypes(parentLocation?.location_type).includes(location.location_type),
+      );
+    },
     [locations, placeId],
+  );
+  const allowedNewChildTypes = useMemo(
+    () => (selectedLocation ? getAllowedChildTypes(selectedLocation.location_type) : ["Continent"]),
+    [selectedLocation],
   );
 
   const loadLocations = useCallback(async () => {
@@ -115,6 +125,14 @@ export function ChroniclerWorldAtlasPage() {
 
   async function createLocation(locationType: string, parentLocationId: string | null) {
     const supabase = createClient();
+    const parentLocation = parentLocationId ? locations.find((location) => location.id === parentLocationId) : null;
+    const allowedTypes = getAllowedChildTypes(parentLocation?.location_type);
+
+    if (parentLocationId && !allowedTypes.includes(locationType)) {
+      setMessage(`${locationType} cannot be created inside ${parentLocation?.location_type || "that area"}.`);
+      return;
+    }
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -190,6 +208,11 @@ export function ChroniclerWorldAtlasPage() {
 
   function updateSelectedLocation(nextLocation: WorldLocation) {
     setLocations((current) => current.map((location) => (location.id === nextLocation.id ? nextLocation : location)));
+  }
+
+  function createSelectedChildLocation() {
+    if (!selectedLocation || !newChildType) return;
+    void createLocation(newChildType, selectedLocation.id);
   }
 
   async function deleteLocationBranch(location: WorldLocation) {
@@ -299,11 +322,23 @@ export function ChroniclerWorldAtlasPage() {
             <button className="secondary-button" onClick={() => createLocation("Region", continentId || null)} disabled={!continentId}>
               New Region
             </button>
-            <button className="secondary-button" onClick={() => createLocation("City", regionId || null)} disabled={!regionId}>
-              New City / Town / Place
-            </button>
-            <button className="secondary-button" onClick={() => createLocation("Point of Interest", placeId || selectedId || null)} disabled={!selectedId}>
-              New Specific Location
+            <label className="atlas-create-type">
+              <span>New Child Type</span>
+              <select
+                value={newChildType}
+                onChange={(event) => setNewChildType(event.target.value)}
+                disabled={!selectedLocation || allowedNewChildTypes.length === 0}
+              >
+                <option value="">Choose Type</option>
+                {allowedNewChildTypes.map((locationType) => (
+                  <option key={locationType} value={locationType}>
+                    {locationType}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="secondary-button" onClick={createSelectedChildLocation} disabled={!selectedLocation || !newChildType}>
+              New Area Under Selected
             </button>
           </div>
 
@@ -358,6 +393,7 @@ function AtlasAreaSummary({
   onSelect: (location: WorldLocation) => void;
 }) {
   const childLocations = getChildLocations(location.id, locations);
+  const groupedChildLocations = groupLocationsByType(childLocations);
   const specialLocationCount = getSpecialLocationCount(location.id, locations);
 
   return (
@@ -367,17 +403,29 @@ function AtlasAreaSummary({
           <h3>Areas Within {location.name}</h3>
           <span className="tag teal">{childLocations.length}</span>
         </div>
-        <div className="atlas-child-grid">
-          {childLocations.map((childLocation) => (
-            <button className="atlas-child-card" key={childLocation.id} onClick={() => onSelect(childLocation)}>
-              <strong>{childLocation.name}</strong>
-              <span>{childLocation.location_type}</span>
-            </button>
+        <div className="atlas-child-type-stack">
+          {groupedChildLocations.map(([locationType, typeLocations]) => (
+            <div className="atlas-child-type-group" key={locationType}>
+              <div className="atlas-child-type-heading">
+                <strong>{locationType}</strong>
+                <span>{typeLocations.length}</span>
+              </div>
+              <div className="atlas-child-grid">
+                {typeLocations.map((childLocation) => (
+                  <button className="atlas-child-card" key={childLocation.id} onClick={() => onSelect(childLocation)}>
+                    <strong>{childLocation.name}</strong>
+                    <span>{childLocation.location_type}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
           {childLocations.length === 0 ? (
             <div className="empty-state">
               <strong>No nested areas yet.</strong>
-              <span>Open the backend to add areas inside this location.</span>
+              <span>
+                {canHaveChildren(location) ? "Open the backend to add areas inside this location." : "This area type does not have nested areas."}
+              </span>
             </div>
           ) : null}
         </div>
@@ -465,6 +513,9 @@ function LocationEditor({
   onRequestDelete: () => void;
   deleteCount: number;
 }) {
+  const allowedTypes = getAllowedLocationTypesForEditor(location, locations);
+  const allowedParentLocations = locations.filter((parentLocation) => parentLocation.id !== location.id && getAllowedChildTypes(parentLocation.location_type).includes(location.location_type));
+
   return (
     <div className="atlas-editor-simple">
       <div className="atlas-editor-grid">
@@ -475,7 +526,7 @@ function LocationEditor({
         <label className="field">
           <span>Type</span>
           <select value={location.location_type} onChange={(event) => onChange({ ...location, location_type: event.target.value })}>
-            {locationTypes.map((locationType) => (
+            {allowedTypes.map((locationType) => (
               <option key={locationType} value={locationType}>
                 {locationType}
               </option>
@@ -486,13 +537,11 @@ function LocationEditor({
           <span>Parent Area</span>
           <select value={location.parent_location_id || ""} onChange={(event) => onChange({ ...location, parent_location_id: event.target.value || null })}>
             <option value="">No Parent</option>
-            {locations
-              .filter((parentLocation) => parentLocation.id !== location.id)
-              .map((parentLocation) => (
-                <option key={parentLocation.id} value={parentLocation.id}>
-                  {parentLocation.name} ({parentLocation.location_type})
-                </option>
-              ))}
+            {allowedParentLocations.map((parentLocation) => (
+              <option key={parentLocation.id} value={parentLocation.id}>
+                {parentLocation.name} ({parentLocation.location_type})
+              </option>
+            ))}
           </select>
         </label>
         <label className="field">
@@ -558,7 +607,9 @@ function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {
 }
 
 function getChildLocations(locationId: string, locations: WorldLocation[]) {
-  return locations.filter((location) => location.parent_location_id === locationId);
+  const parentLocation = locations.find((location) => location.id === locationId);
+  const allowedTypes = getAllowedChildTypes(parentLocation?.location_type);
+  return locations.filter((location) => location.parent_location_id === locationId && allowedTypes.includes(location.location_type));
 }
 
 function getSpecialLocationCount(locationId: string, locations: WorldLocation[]) {
@@ -568,6 +619,40 @@ function getSpecialLocationCount(locationId: string, locations: WorldLocation[])
 
 function isSpecialLocation(location: WorldLocation) {
   return ["Point of Interest", "Dungeon", "Landmark", "Building"].includes(location.location_type);
+}
+
+function groupLocationsByType(locations: WorldLocation[]) {
+  const groups = new Map<string, WorldLocation[]>();
+
+  for (const location of locations) {
+    groups.set(location.location_type, [...(groups.get(location.location_type) || []), location]);
+  }
+
+  return Array.from(groups.entries()).sort(([leftType], [rightType]) => locationTypes.indexOf(leftType) - locationTypes.indexOf(rightType));
+}
+
+function getAllowedChildTypes(parentType?: string) {
+  if (!parentType) return ["Continent"];
+
+  if (parentType === "Continent") return ["Region"];
+  if (parentType === "Region") return ["City", "Town", "Village", "Landmark", "Wilderness", "Dungeon", "Building", "Point of Interest"];
+  if (["City", "Town", "Village"].includes(parentType)) return ["District", "Building", "Point of Interest", "Dungeon", "Landmark"];
+  if (parentType === "District") return ["Building", "Point of Interest", "Landmark"];
+  if (parentType === "Wilderness") return ["Dungeon", "Landmark", "Point of Interest"];
+
+  return [];
+}
+
+function getAllowedLocationTypesForEditor(location: WorldLocation, locations: WorldLocation[]) {
+  if (!location.parent_location_id) return ["Continent"];
+
+  const parentLocation = locations.find((candidate) => candidate.id === location.parent_location_id);
+  const allowedTypes = getAllowedChildTypes(parentLocation?.location_type);
+  return allowedTypes.includes(location.location_type) ? allowedTypes : [location.location_type, ...allowedTypes];
+}
+
+function canHaveChildren(location: WorldLocation) {
+  return getAllowedChildTypes(location.location_type).length > 0;
 }
 
 function getDeleteFallbackLocation(deletedLocation: WorldLocation, remainingLocations: WorldLocation[]) {
