@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { CharacterProfile } from "@/data/domain";
 import { Icon } from "@/components/icons";
@@ -27,6 +27,8 @@ export function PlayerCharacterDashboard() {
   const [fatigue, setFatigue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const hasLoadedAutoSave = useRef(false);
+  const skipNextAutoSave = useRef(false);
 
   const loadCharacter = useCallback(async () => {
     const characterId = window.localStorage.getItem("aeons:selectedCharacterId");
@@ -56,24 +58,43 @@ export function PlayerCharacterDashboard() {
     void loadCharacter();
   }, [loadCharacter]);
 
+  useEffect(() => {
+    if (!character) return;
+
+    if (!hasLoadedAutoSave.current) {
+      hasLoadedAutoSave.current = true;
+      return;
+    }
+
+    if (skipNextAutoSave.current) {
+      skipNextAutoSave.current = false;
+      return;
+    }
+
+    const saveTimer = window.setTimeout(async () => {
+      const supabase = createClient();
+      setMessage("Saving changes...");
+
+      const { error } = await supabase.from("characters").update(getCharacterUpdate(character)).eq("id", character.id);
+
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+
+      setMessage("Changes saved.");
+    }, 700);
+
+    return () => window.clearTimeout(saveTimer);
+  }, [character]);
+
   async function saveCharacter() {
     if (!character) return;
 
     const supabase = createClient();
     const { data, error } = await supabase
       .from("characters")
-      .update({
-        name: character.name.trim() || "Unnamed Character",
-        class_name: character.className.trim() || "Unchosen Class",
-        level: character.level,
-        ancestry: character.ancestry,
-        background: character.background,
-        resolve_current: character.resolveCurrent,
-        resolve_max: character.resolveMax,
-        wounds: character.wounds,
-        notes: character.notes,
-        attributes: character.attributes,
-      })
+      .update(getCharacterUpdate(character))
       .eq("id", character.id)
       .select("*")
       .single();
@@ -83,6 +104,7 @@ export function PlayerCharacterDashboard() {
       return;
     }
 
+    skipNextAutoSave.current = true;
     setCharacter(mapDbCharacter(data as DbCharacter));
     setMessage("Character saved.");
   }
@@ -483,6 +505,21 @@ function mapDbCharacter(character: DbCharacter): CharacterProfile {
     wounds: character.wounds,
     attributes: normalizeAttributes(character.attributes),
     notes: character.notes,
+  };
+}
+
+function getCharacterUpdate(character: CharacterProfile) {
+  return {
+    name: character.name.trim() || "Unnamed Character",
+    class_name: character.className.trim() || "Unchosen Class",
+    level: character.level,
+    ancestry: character.ancestry,
+    background: character.background,
+    resolve_current: character.resolveCurrent,
+    resolve_max: character.resolveMax,
+    wounds: character.wounds,
+    notes: character.notes,
+    attributes: character.attributes,
   };
 }
 
