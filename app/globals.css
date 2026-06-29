@@ -989,6 +989,35 @@ h1 {
   font-size: 12px;
 }
 
+.atlas-npc-list {
+  display: grid;
+  gap: 8px;
+}
+
+.atlas-npc-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 16, 14, 0.28);
+}
+
+.atlas-npc-chip:hover {
+  border-color: rgba(66, 180, 168, 0.55);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.atlas-npc-chip strong {
+  color: var(--ink);
+}
+
+.atlas-npc-chip span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .atlas-editor-simple,
 .atlas-editor-grid,
 .atlas-notes-grid {
@@ -1025,6 +1054,201 @@ h1 {
 .atlas-danger-zone span {
   color: var(--muted);
   font-size: 13px;
+}
+
+.npc-dashboard,
+.npc-detail-page {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.npc-dashboard-toolbar {
+  display: grid;
+  gap: 14px;
+}
+
+.npc-dashboard-toolbar p,
+.npc-card p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.npc-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.npc-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.npc-card {
+  min-height: 214px;
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.045);
+}
+
+.npc-card:hover {
+  border-color: rgba(66, 180, 168, 0.55);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.npc-card-portrait,
+.npc-detail-portrait {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(223, 190, 123, 0.38);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(223, 190, 123, 0.16), transparent 42%),
+    rgba(17, 16, 14, 0.52);
+  background-position: center;
+  background-size: cover;
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 42px;
+}
+
+.npc-card-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.npc-card-body strong {
+  display: block;
+  font-size: 20px;
+}
+
+.npc-card-body span:not(.tag) {
+  color: var(--muted);
+}
+
+.npc-card-meta,
+.npc-card-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.npc-card-groups span {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(17, 16, 14, 0.36);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.npc-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.npc-detail-hero {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.npc-portrait-panel,
+.npc-identity-panel,
+.npc-stat-section {
+  display: grid;
+  gap: 14px;
+}
+
+.npc-detail-portrait {
+  min-height: 300px;
+  font-size: 84px;
+}
+
+.npc-name-field input {
+  min-height: 54px;
+  font-family: var(--font-display);
+  font-size: 32px;
+}
+
+.npc-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.npc-description-panel textarea {
+  min-height: 150px;
+}
+
+.npc-sheet-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+.npc-status-grid,
+.npc-attribute-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.npc-status-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.npc-attribute-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.npc-status-box,
+.npc-attribute-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 16, 14, 0.3);
+}
+
+.npc-status-box strong,
+.npc-attribute-box span {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.npc-status-box label {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.npc-status-box input,
+.npc-attribute-box input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(244, 239, 226, 0.055);
+  color: var(--ink);
+  outline: none;
+  text-align: center;
 }
 
 .class-builder-layout,
@@ -2605,7 +2829,10 @@ ul {
   .class-builder-layout,
   .player-class-layout,
   .atlas-hero-panel,
-  .atlas-child-grid {
+  .atlas-child-grid,
+  .npc-card-grid,
+  .npc-detail-hero,
+  .npc-sheet-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2632,7 +2859,8 @@ ul {
   .class-editor-grid,
   .class-feature-panels,
   .player-class-top,
-  .player-class-columns {
+  .player-class-columns,
+  .npc-filter-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2674,6 +2902,10 @@ ul {
 
   .license-dashboard-actions {
     width: 100%;
+  }
+
+  .npc-card {
+    grid-template-columns: 112px minmax(0, 1fr);
   }
 }
 
@@ -2812,6 +3044,25 @@ ul {
   .license-dashboard-actions .primary-inline-button,
   .license-dashboard-actions .secondary-button {
     width: 100%;
+  }
+
+  .npc-card,
+  .npc-detail-grid,
+  .npc-status-grid,
+  .npc-attribute-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .npc-card-portrait {
+    min-height: 180px;
+  }
+
+  .npc-detail-portrait {
+    min-height: 240px;
+  }
+
+  .npc-name-field input {
+    font-size: 24px;
   }
 }
 

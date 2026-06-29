@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ChroniclerClassesPage } from "@/components/chronicler-classes-page";
+import { ChroniclerNpcsPage } from "@/components/chronicler-npcs-page";
 import { ChroniclerWorldAtlasPage } from "@/components/chronicler-world-atlas-page";
 import { DetailPage, TablePage } from "@/components/detail-page";
 import { StagePage } from "@/components/stage-page";
@@ -124,21 +125,7 @@ function DmContent({ view }: { view: DmView }) {
 
   if (view === "world") return <ChroniclerWorldAtlasPage />;
 
-  if (view === "npcs") {
-    return (
-      <DetailPage
-        mainTitle="NPC Creation Flow"
-        items={[
-          ["Quick Add NPC", "Plus-button creation during prep or live play."],
-          ["Met NPC Toggle", "Publish the safe version to Trailblazer knowledge."],
-          ["Faction Links", "Connect NPCs to regions, quests, and story arcs."],
-          ["Private Secrets", "Keep unrevealed motives hidden from Trailblazers."],
-        ]}
-        sideTitle="NPC Fields"
-        sideItems={["Name", "Region", "Faction", "Disposition", "Known by Trailblazers", "Secret notes"]}
-      />
-    );
-  }
+  if (view === "npcs") return <ChroniclerNpcsPage />;
 
   if (view === "quests") {
     return (

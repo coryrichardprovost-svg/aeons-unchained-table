@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/browser";
 
 type WorldLocation = {
@@ -19,10 +20,19 @@ type WorldLocation = {
   visibility: "chronicler" | "players";
 };
 
+type AtlasNpc = {
+  id: string;
+  name: string;
+  location_id: string | null;
+  faction: string;
+  organization: string;
+};
+
 const locationTypes = ["Continent", "Region", "City", "Town", "Village", "District", "Landmark", "Wilderness", "Dungeon", "Building", "Point of Interest"];
 
 export function ChroniclerWorldAtlasPage() {
   const [locations, setLocations] = useState<WorldLocation[]>([]);
+  const [npcs, setNpcs] = useState<AtlasNpc[]>([]);
   const [continentId, setContinentId] = useState("");
   const [regionId, setRegionId] = useState("");
   const [placeId, setPlaceId] = useState("");
@@ -66,19 +76,27 @@ export function ChroniclerWorldAtlasPage() {
 
   const loadLocations = useCallback(async () => {
     const supabase = createClient();
-    const { data, error } = await supabase.from("world_locations").select("*").order("name", { ascending: true });
+    const [{ data: locationData, error: locationError }, { data: npcData, error: npcError }] = await Promise.all([
+      supabase.from("world_locations").select("*").order("name", { ascending: true }),
+      supabase.from("npcs").select("id,name,location_id,faction,organization").order("name", { ascending: true }),
+    ]);
 
-    if (error) {
+    if (locationError) {
       setMessage(
-        error.message.includes("world_locations")
+        locationError.message.includes("world_locations")
           ? "Run supabase/migrations/011_add_world_locations.sql in Supabase SQL Editor."
-          : error.message,
+          : locationError.message,
       );
       setIsLoading(false);
       return;
     }
 
-    setLocations((data || []) as WorldLocation[]);
+    if (npcError) {
+      setMessage(npcError.message.includes("npcs") ? "Run supabase/migrations/012_add_npcs.sql in Supabase SQL Editor." : npcError.message);
+    }
+
+    setLocations((locationData || []) as WorldLocation[]);
+    setNpcs((npcData || []) as AtlasNpc[]);
     setIsLoading(false);
   }, []);
 
@@ -302,7 +320,7 @@ export function ChroniclerWorldAtlasPage() {
           <span className="tag gold">{selectedLocation?.location_type || "No area selected"}</span>
         </div>
         {selectedLocation ? (
-          <AtlasAreaSummary location={selectedLocation} locations={locations} onSelect={selectLocation} />
+          <AtlasAreaSummary location={selectedLocation} locations={locations} npcs={npcs} onSelect={selectLocation} />
         ) : (
           <p className="subcopy">Choose a continent, region, place, or specific location to view its information.</p>
         )}
@@ -386,15 +404,19 @@ export function ChroniclerWorldAtlasPage() {
 function AtlasAreaSummary({
   location,
   locations,
+  npcs,
   onSelect,
 }: {
   location: WorldLocation;
   locations: WorldLocation[];
+  npcs: AtlasNpc[];
   onSelect: (location: WorldLocation) => void;
 }) {
   const childLocations = getChildLocations(location.id, locations);
   const groupedChildLocations = groupLocationsByType(childLocations);
   const specialLocationCount = getSpecialLocationCount(location.id, locations);
+  const branchIds = getLocationBranchIds(location.id, locations);
+  const locationNpcs = npcs.filter((npc) => npc.location_id && branchIds.includes(npc.location_id));
 
   return (
     <div className="atlas-area-summary">
@@ -441,6 +463,22 @@ function AtlasAreaSummary({
             ? `${location.name} has ${specialLocationCount} special location${specialLocationCount === 1 ? "" : "s"} nested inside it.`
             : "No special locations have been added under this area yet."}
         </p>
+      </section>
+
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>NPCs In This Area</h3>
+          <span className="tag teal">{locationNpcs.length}</span>
+        </div>
+        <div className="atlas-npc-list">
+          {locationNpcs.map((npc) => (
+            <Link href={`/dm/npcs/${npc.id}`} className="atlas-npc-chip" key={npc.id}>
+              <strong>{npc.name}</strong>
+              <span>{npc.faction || npc.organization || "No group set"}</span>
+            </Link>
+          ))}
+          {locationNpcs.length === 0 ? <p className="subcopy">No NPCs are connected to this area yet.</p> : null}
+        </div>
       </section>
 
       <section className="atlas-summary-block">
