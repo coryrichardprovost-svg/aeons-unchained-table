@@ -197,15 +197,15 @@ export function ChroniclerNpcDetailPage({ npcId }: { npcId: string }) {
           </label>
 
           <div className="npc-detail-grid">
-            <label className="field">
+            <label className="field npc-compact-field">
               <span>Age</span>
               <input value={npc.age} onChange={(event) => updateNpc({ age: event.target.value })} />
             </label>
-            <label className="field">
+            <label className="field npc-compact-field">
               <span>Sex</span>
               <input value={npc.sex} onChange={(event) => updateNpc({ sex: event.target.value })} />
             </label>
-            <label className="field">
+            <label className="field npc-class-field">
               <span>Class</span>
               <select value={npc.class_name} onChange={(event) => updateNpc({ class_name: event.target.value })}>
                 <option value="">No class</option>
@@ -216,7 +216,7 @@ export function ChroniclerNpcDetailPage({ npcId }: { npcId: string }) {
                 ))}
               </select>
             </label>
-            <label className="field">
+            <label className="field npc-compact-field">
               <span>Level</span>
               <input
                 inputMode="numeric"
@@ -224,11 +224,11 @@ export function ChroniclerNpcDetailPage({ npcId }: { npcId: string }) {
                 onChange={(event) => updateNpc({ level: clampNumber(event.target.value, 0, 999) })}
               />
             </label>
-            <label className="field">
+            <label className="field npc-wide-field">
               <span>Personality Type</span>
               <input value={npc.personality_type} onChange={(event) => updateNpc({ personality_type: event.target.value })} />
             </label>
-            <label className="field">
+            <label className="field npc-wide-field">
               <span>Where They Are From</span>
               <select value={npc.location_id || ""} onChange={(event) => updateNpc({ location_id: event.target.value || null })}>
                 <option value="">No location</option>
@@ -239,11 +239,11 @@ export function ChroniclerNpcDetailPage({ npcId }: { npcId: string }) {
                 ))}
               </select>
             </label>
-            <label className="field">
+            <label className="field npc-wide-field">
               <span>Faction</span>
               <input value={npc.faction} onChange={(event) => updateNpc({ faction: event.target.value })} />
             </label>
-            <label className="field">
+            <label className="field npc-wide-field">
               <span>Organization</span>
               <input value={npc.organization} onChange={(event) => updateNpc({ organization: event.target.value })} />
             </label>

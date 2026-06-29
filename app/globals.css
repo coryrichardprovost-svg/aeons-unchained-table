@@ -1184,8 +1184,25 @@ h1 {
 
 .npc-detail-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
+  align-items: end;
+}
+
+.npc-compact-field {
+  grid-column: span 1;
+}
+
+.npc-class-field {
+  grid-column: span 3;
+}
+
+.npc-wide-field {
+  grid-column: span 3;
+}
+
+.npc-compact-field input {
+  text-align: center;
 }
 
 .npc-description-panel textarea {
@@ -3051,6 +3068,12 @@ ul {
   .npc-status-grid,
   .npc-attribute-grid {
     grid-template-columns: 1fr;
+  }
+
+  .npc-compact-field,
+  .npc-class-field,
+  .npc-wide-field {
+    grid-column: 1 / -1;
   }
 
   .npc-card-portrait {
