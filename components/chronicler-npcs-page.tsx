@@ -67,11 +67,6 @@ export function ChroniclerNpcsPage() {
     void loadNpcs();
   }, [loadNpcs]);
 
-  const selectedBranchIds = useMemo(
-    () => (selectedLocationId ? getLocationBranchIds(selectedLocationId, locations) : []),
-    [locations, selectedLocationId],
-  );
-
   const groups = useMemo(() => {
     const groupNames = new Set<string>();
     npcs.forEach((npc) => {
@@ -84,11 +79,11 @@ export function ChroniclerNpcsPage() {
   const filteredNpcs = useMemo(
     () =>
       npcs.filter((npc) => {
-        const matchesLocation = !selectedLocationId || (npc.location_id ? selectedBranchIds.includes(npc.location_id) : false);
+        const matchesLocation = !selectedLocationId || npc.location_id === selectedLocationId;
         const matchesGroup = !selectedGroup || npc.faction === selectedGroup || npc.organization === selectedGroup;
         return matchesLocation && matchesGroup;
       }),
-    [npcs, selectedBranchIds, selectedGroup, selectedLocationId],
+    [npcs, selectedGroup, selectedLocationId],
   );
 
   async function createNpc() {
@@ -191,17 +186,6 @@ export function ChroniclerNpcsPage() {
       </section>
     </div>
   );
-}
-
-function getLocationBranchIds(parentId: string, locations: WorldLocation[]) {
-  const branchIds = [parentId];
-  const childLocations = locations.filter((location) => location.parent_location_id === parentId);
-
-  childLocations.forEach((location) => {
-    branchIds.push(...getLocationBranchIds(location.id, locations));
-  });
-
-  return branchIds;
 }
 
 function getLocationLabel(locationId: string | null, locations: WorldLocation[]) {
