@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { DetailPage } from "@/components/detail-page";
 import { InventoryPage } from "@/components/inventory-page";
-import { PlayerCharacterDashboard } from "@/components/player-character-dashboard";
+import { PlayerSheetPage } from "@/components/player-sheet-page";
 import { StagePage } from "@/components/stage-page";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { abilities, craftingProjects, knowledgeEntries, recentNotes } from "@/data/sample-data";
@@ -54,6 +54,8 @@ type TrailblazerView = keyof typeof titles;
 export default async function TrailblazerRoutePage({ params }: { params: Promise<{ view: string }> }) {
   const { view } = await params;
   if (!isTrailblazerView(view)) notFound();
+  if (view === "sheet") return <PlayerSheetPage />;
+
   const title = titles[view];
 
   return (
@@ -64,7 +66,6 @@ export default async function TrailblazerRoutePage({ params }: { params: Promise
 }
 
 function TrailblazerContent({ view }: { view: TrailblazerView }) {
-  if (view === "sheet") return <SheetPage />;
   if (view === "inventory") return <InventoryPage />;
   if (view === "class") {
     return (
@@ -117,10 +118,6 @@ function TrailblazerContent({ view }: { view: TrailblazerView }) {
     );
   }
   return <StagePage isDm={false} />;
-}
-
-function SheetPage() {
-  return <PlayerCharacterDashboard />;
 }
 
 function isTrailblazerView(view: string): view is TrailblazerView {
