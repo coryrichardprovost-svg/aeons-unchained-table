@@ -167,13 +167,23 @@ export function ChroniclerWorldAtlasPage() {
     hasLoadedAutoSave.current = false;
     setRegionId(nextRegionId);
     setPlaceId("");
-    setSelectedId(nextRegionId);
+    setSelectedId(nextRegionId || continentId);
   }
 
   function choosePlace(nextPlaceId: string) {
     hasLoadedAutoSave.current = false;
     setPlaceId(nextPlaceId);
-    setSelectedId(nextPlaceId);
+    setSelectedId(nextPlaceId || regionId || continentId);
+  }
+
+  function chooseSpecificLocation(nextLocationId: string) {
+    if (!nextLocationId) {
+      hasLoadedAutoSave.current = false;
+      setSelectedId(placeId || regionId || continentId);
+      return;
+    }
+
+    selectLocation(locations.find((location) => location.id === nextLocationId) || null);
   }
 
   function updateSelectedLocation(nextLocation: WorldLocation) {
@@ -210,8 +220,8 @@ export function ChroniclerWorldAtlasPage() {
             disabled={!placeId}
             locations={specificLocations}
             placeholder={placeId ? "Use selected place" : "Choose Location"}
-            fallbackValue={placeId}
-            onChange={(locationId) => selectLocation(locations.find((location) => location.id === locationId) || null)}
+            fallbackValue=""
+            onChange={chooseSpecificLocation}
           />
 
           <span className="tag teal">{isLoading ? "Loading" : `${locations.length} saved areas`}</span>
