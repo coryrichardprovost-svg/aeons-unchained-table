@@ -62,6 +62,7 @@ create table public.characters (
   resolve_max integer not null default 10 check (resolve_max >= 0),
   wounds integer not null default 0 check (wounds >= 0),
   notes text not null default '',
+  sheet_data jsonb not null default '{}'::jsonb,
   attributes jsonb not null default '{
     "str": 10,
     "spd": 10,

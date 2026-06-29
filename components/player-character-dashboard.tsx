@@ -19,11 +19,52 @@ type DbCharacter = {
   wounds: number;
   notes: string;
   attributes: Record<string, number | undefined>;
+  sheet_data?: Partial<CharacterSheetData> | null;
+};
+
+type StatusTrack = {
+  current: string;
+  max: string;
+  grade: string;
+  result: string;
+};
+
+type SheetRow = {
+  item: string;
+  note: string;
+};
+
+type GearSlot = {
+  itemName: string;
+  stats: Record<string, string>;
+};
+
+type SkillRow = {
+  grade: string;
+  item: string;
+};
+
+type CharacterSheetData = {
+  status: Record<"health" | "stamina" | "mind" | "divinity", StatusTrack>;
+  fatigue: number;
+  carryingCapacity: {
+    current: string;
+    max: string;
+  };
+  movement: Record<"Sprint" | "Run" | "Walk" | "Sneak", string>;
+  tension: Record<"PER" | "INS" | "INI" | "AP" | "MOR", string>;
+  defenses: Record<"AGI" | "PRO" | "DEF" | "RES", string>;
+  wallet: Record<"PP" | "GP" | "EP" | "SP" | "CP", string>;
+  skills: Record<"Knowledge" | "Proficiency" | "Skill" | "Ability", SkillRow[]>;
+  gear: SheetRow[];
+  arsenal: Record<string, GearSlot>;
+  armory: Record<string, GearSlot>;
+  accessories: Record<string, GearSlot>;
 };
 
 export function PlayerCharacterDashboard() {
   const [character, setCharacter] = useState<CharacterProfile | null>(null);
-  const [fatigue, setFatigue] = useState(0);
+  const [sheetData, setSheetData] = useState<CharacterSheetData>(createDefaultSheetData());
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const hasLoadedAutoSave = useRef(false);
@@ -46,7 +87,9 @@ export function PlayerCharacterDashboard() {
       return;
     }
 
-    setCharacter(mapDbCharacter(data as DbCharacter));
+    const dbCharacter = data as DbCharacter;
+    setCharacter(mapDbCharacter(dbCharacter));
+    setSheetData(normalizeSheetData(dbCharacter.sheet_data));
     setIsLoading(false);
   }, []);
 
@@ -68,7 +111,7 @@ export function PlayerCharacterDashboard() {
       const supabase = createClient();
       setMessage("Saving changes...");
 
-      const { error } = await supabase.from("characters").update(getCharacterUpdate(character)).eq("id", character.id);
+      const { error } = await supabase.from("characters").update(getCharacterUpdate(character, sheetData)).eq("id", character.id);
 
       if (error) {
         setMessage(error.message);
@@ -79,7 +122,11 @@ export function PlayerCharacterDashboard() {
     }, 700);
 
     return () => window.clearTimeout(saveTimer);
-  }, [character]);
+  }, [character, sheetData]);
+
+  function updateSheetData(updater: (current: CharacterSheetData) => CharacterSheetData) {
+    setSheetData((current) => updater(current));
+  }
 
   if (isLoading) {
     return (
@@ -134,10 +181,31 @@ export function PlayerCharacterDashboard() {
           <div className="license-left-stack">
             <LicensePanel className="license-area-status" title="Status">
               <div className="license-status-grid">
-                <TrackBox tone="health" title="Health" value={character.resolveMax} onChange={(resolveMax) => setCharacter({ ...character, resolveMax })} />
-                <TrackBox title="Stamina" value={character.resolveCurrent} onChange={(resolveCurrent) => setCharacter({ ...character, resolveCurrent })} />
-                <TrackBox title="Mind" />
-                <TrackBox title="Divinity" />
+                <TrackBox
+                  tone="health"
+                  title="Health"
+                  track={sheetData.status.health}
+                  value={character.resolveMax}
+                  onChange={(resolveMax) => setCharacter({ ...character, resolveMax })}
+                  onTrackChange={(track) => updateSheetData((current) => ({ ...current, status: { ...current.status, health: track } }))}
+                />
+                <TrackBox
+                  title="Stamina"
+                  track={sheetData.status.stamina}
+                  value={character.resolveCurrent}
+                  onChange={(resolveCurrent) => setCharacter({ ...character, resolveCurrent })}
+                  onTrackChange={(track) => updateSheetData((current) => ({ ...current, status: { ...current.status, stamina: track } }))}
+                />
+                <TrackBox
+                  title="Mind"
+                  track={sheetData.status.mind}
+                  onTrackChange={(track) => updateSheetData((current) => ({ ...current, status: { ...current.status, mind: track } }))}
+                />
+                <TrackBox
+                  title="Divinity"
+                  track={sheetData.status.divinity}
+                  onTrackChange={(track) => updateSheetData((current) => ({ ...current, status: { ...current.status, divinity: track } }))}
+                />
               </div>
             </LicensePanel>
 
@@ -166,10 +234,14 @@ export function PlayerCharacterDashboard() {
                 </LicensePanel>
 
                 <div className="license-area-skills license-skill-table">
-                  <SkillColumn title="Knowledge" items={["History", "Lore", "Politics", "Religion", "Occult", "Arcana", "Nature", "Academia"]} />
-                  <SkillColumn title="Proficiency" items={["Alchemy", "Engineer", "Enchant", "Medicine", "Sorcery", "Primurgy", "Thaumaturgy", "Theurgy", "Goetia"]} />
-                  <SkillColumn title="Skill" items={["Athletics", "Acrobatics", "Stealth", "Survival", "Riding", "Thievery", "Incanting"]} />
-                  <SkillColumn title="Ability" items={["Investigation", "First Aid", "Focus", "Perform"]} />
+                  {(["Knowledge", "Proficiency", "Skill", "Ability"] as const).map((title) => (
+                    <SkillColumn
+                      key={title}
+                      title={title}
+                      rows={sheetData.skills[title]}
+                      onChange={(rows) => updateSheetData((current) => ({ ...current, skills: { ...current.skills, [title]: rows } }))}
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -184,7 +256,15 @@ export function PlayerCharacterDashboard() {
                     ].map(([value, label]) => (
                       <div className="movement-row" key={label}>
                         <label>
-                          <input aria-label={`${label} movement`} defaultValue={value} inputMode="numeric" onChange={formatNumberInput} />
+                          <input
+                            aria-label={`${label} movement`}
+                            inputMode="numeric"
+                            value={sheetData.movement[label as keyof CharacterSheetData["movement"]] || value}
+                            onChange={(event) => {
+                              const nextValue = formatNumberText(event.target.value);
+                              updateSheetData((current) => ({ ...current, movement: { ...current.movement, [label]: nextValue } }));
+                            }}
+                          />
                           <span>m</span>
                         </label>
                         <strong>{label}</strong>
@@ -197,7 +277,15 @@ export function PlayerCharacterDashboard() {
                   <div className="license-mini-table">
                     {["PER", "INS", "INI", "AP", "MOR"].map((label) => (
                       <div className="split-stat-row" key={label}>
-                        <input aria-label={`${label} tension`} inputMode="numeric" onChange={formatNumberInput} />
+                        <input
+                          aria-label={`${label} tension`}
+                          inputMode="numeric"
+                          value={sheetData.tension[label as keyof CharacterSheetData["tension"]]}
+                          onChange={(event) => {
+                            const nextValue = formatNumberText(event.target.value);
+                            updateSheetData((current) => ({ ...current, tension: { ...current.tension, [label]: nextValue } }));
+                          }}
+                        />
                         <strong>{label}</strong>
                       </div>
                     ))}
@@ -209,7 +297,15 @@ export function PlayerCharacterDashboard() {
                     <div className="license-mini-table">
                       {["AGI", "PRO", "DEF", "RES"].map((label) => (
                         <div className="split-stat-row" key={label}>
-                          <input aria-label={`${label} defense`} inputMode="numeric" onChange={formatNumberInput} />
+                          <input
+                            aria-label={`${label} defense`}
+                            inputMode="numeric"
+                            value={sheetData.defenses[label as keyof CharacterSheetData["defenses"]]}
+                            onChange={(event) => {
+                              const nextValue = formatNumberText(event.target.value);
+                              updateSheetData((current) => ({ ...current, defenses: { ...current.defenses, [label]: nextValue } }));
+                            }}
+                          />
                           <strong>{label}</strong>
                         </div>
                       ))}
@@ -221,7 +317,15 @@ export function PlayerCharacterDashboard() {
                     <div className="wallet-grid">
                       {["PP", "GP", "EP", "SP", "CP"].map((coin) => (
                         <div className="wallet-row" key={coin}>
-                          <input aria-label={`${coin} wallet`} inputMode="numeric" onChange={formatNumberInput} />
+                          <input
+                            aria-label={`${coin} wallet`}
+                            inputMode="numeric"
+                            value={sheetData.wallet[coin as keyof CharacterSheetData["wallet"]]}
+                            onChange={(event) => {
+                              const nextValue = formatNumberText(event.target.value);
+                              updateSheetData((current) => ({ ...current, wallet: { ...current.wallet, [coin]: nextValue } }));
+                            }}
+                          />
                           <span>{coin}</span>
                         </div>
                       ))}
@@ -235,23 +339,63 @@ export function PlayerCharacterDashboard() {
           <div className="license-equipment-stack">
             <div className="license-area-marks license-small-row">
               <MarkCounter title="Wounds" value={character.wounds} onChange={(wounds) => setCharacter({ ...character, wounds })} />
-              <MarkCounter title="Fatigue" value={fatigue} onChange={setFatigue} />
+              <MarkCounter title="Fatigue" value={sheetData.fatigue} onChange={(fatigue) => updateSheetData((current) => ({ ...current, fatigue }))} />
             </div>
-            <GearTable className="license-area-arsenal" title="Arsenal" rows={["Main 1", "Off 1", "Main 2", "Off 2"]} columns={["RNG", "ATK", "PEN"]} />
-            <GearList className="license-area-gear" title="Gear" />
+            <GearTable
+              className="license-area-arsenal"
+              title="Arsenal"
+              rows={["Main 1", "Off 1", "Main 2", "Off 2"]}
+              columns={["RNG", "ATK", "PEN"]}
+              values={sheetData.arsenal}
+              onChange={(arsenal) => updateSheetData((current) => ({ ...current, arsenal }))}
+            />
+            <GearList
+              className="license-area-gear"
+              title="Gear"
+              rows={sheetData.gear}
+              onChange={(gear) => updateSheetData((current) => ({ ...current, gear }))}
+            />
           </div>
 
           <div className="license-equipment-stack">
             <LicensePanel className="license-area-capacity" title="Carrying Capacity">
               <div className="capacity-box">
-                <input />
+                <input
+                  value={sheetData.carryingCapacity.current}
+                  inputMode="numeric"
+                  onChange={(event) => {
+                    const nextValue = formatNumberText(event.target.value);
+                    updateSheetData((current) => ({ ...current, carryingCapacity: { ...current.carryingCapacity, current: nextValue } }));
+                  }}
+                />
                 <span>KG /</span>
-                <input />
+                <input
+                  value={sheetData.carryingCapacity.max}
+                  inputMode="numeric"
+                  onChange={(event) => {
+                    const nextValue = formatNumberText(event.target.value);
+                    updateSheetData((current) => ({ ...current, carryingCapacity: { ...current.carryingCapacity, max: nextValue } }));
+                  }}
+                />
                 <span>KG</span>
               </div>
             </LicensePanel>
-            <GearTable className="license-area-armory" title="Armory" rows={["Head", "Body", "Hands", "Feet"]} columns={["PRO", "DEF", "RES"]} />
-            <GearTable className="license-area-accessories" title="Accessories" rows={["Ears", "Neck", "Wrists", "Rings"]} columns={["PRO", "DEF", "RES"]} />
+            <GearTable
+              className="license-area-armory"
+              title="Armory"
+              rows={["Head", "Body", "Hands", "Feet"]}
+              columns={["PRO", "DEF", "RES"]}
+              values={sheetData.armory}
+              onChange={(armory) => updateSheetData((current) => ({ ...current, armory }))}
+            />
+            <GearTable
+              className="license-area-accessories"
+              title="Accessories"
+              rows={["Ears", "Neck", "Wrists", "Rings"]}
+              columns={["PRO", "DEF", "RES"]}
+              values={sheetData.accessories}
+              onChange={(accessories) => updateSheetData((current) => ({ ...current, accessories }))}
+            />
           </div>
         </div>
 
@@ -280,16 +424,22 @@ function LicensePanel({ title, children, className = "" }: { title: string; chil
   );
 }
 
-function TrackBox({ title, value, tone, onChange }: { title: string; value?: number; tone?: string; onChange?: (value: number) => void }) {
-  const currentInputProps =
-    onChange && value !== undefined
-      ? {
-          value: formatNumber(value),
-          onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(parseNumber(event.target.value)),
-        }
-      : {
-          onChange: formatNumberInput,
-        };
+function TrackBox({
+  title,
+  value,
+  tone,
+  track,
+  onChange,
+  onTrackChange,
+}: {
+  title: string;
+  value?: number;
+  tone?: string;
+  track: StatusTrack;
+  onChange?: (value: number) => void;
+  onTrackChange: (track: StatusTrack) => void;
+}) {
+  const currentValue = onChange && value !== undefined ? formatNumber(value) : track.current;
 
   return (
     <div className={`license-track-box ${tone || ""}`}>
@@ -298,13 +448,23 @@ function TrackBox({ title, value, tone, onChange }: { title: string; value?: num
         <input
           aria-label={`${title} current`}
           inputMode="numeric"
-          {...currentInputProps}
+          value={currentValue}
+          onChange={(event) => {
+            const nextValue = formatNumberText(event.target.value);
+            if (onChange) onChange(parseNumber(nextValue));
+            else onTrackChange({ ...track, current: nextValue });
+          }}
         />
         <span>-</span>
-        <input aria-label={`${title} max`} inputMode="numeric" onChange={formatNumberInput} />
+        <input
+          aria-label={`${title} max`}
+          inputMode="numeric"
+          value={track.max}
+          onChange={(event) => onTrackChange({ ...track, max: formatNumberText(event.target.value) })}
+        />
       </div>
       <div className="status-track-footer">
-        <select aria-label={`${title} grade`} defaultValue="F">
+        <select aria-label={`${title} grade`} value={track.grade} onChange={(event) => onTrackChange({ ...track, grade: event.target.value })}>
           {["A", "B", "C", "D", "E", "F"].map((grade) => (
             <option key={grade} value={grade}>
               {grade}
@@ -312,7 +472,12 @@ function TrackBox({ title, value, tone, onChange }: { title: string; value?: num
           ))}
         </select>
         <span>=</span>
-        <input aria-label={`${title} result`} inputMode="numeric" onChange={formatNumberInput} />
+        <input
+          aria-label={`${title} result`}
+          inputMode="numeric"
+          value={track.result}
+          onChange={(event) => onTrackChange({ ...track, result: formatNumberText(event.target.value) })}
+        />
       </div>
     </div>
   );
@@ -384,16 +549,18 @@ function MarkCounter({ title, value, onChange }: { title: string; value: number;
   );
 }
 
-function SkillColumn({ title, items }: { title: string; items: string[] }) {
-  const rows = Array.from({ length: 9 }, (_, index) => items[index] || "");
-
+function SkillColumn({ title, rows, onChange }: { title: string; rows: SkillRow[]; onChange: (rows: SkillRow[]) => void }) {
   return (
     <div className="skill-column">
       <strong>{title}</strong>
-      {rows.map((item, index) => (
+      {rows.map((row, index) => (
         <label key={`${title}-${index}`}>
-          {item ? (
-            <select aria-label={`${title} ${item} grade`} defaultValue="F">
+          {row.item ? (
+            <select
+              aria-label={`${title} ${row.item} grade`}
+              value={row.grade}
+              onChange={(event) => onChange(replaceArrayItem(rows, index, { ...row, grade: event.target.value }))}
+            >
               {["A", "B", "C", "D", "E", "F"].map((grade) => (
                 <option key={grade} value={grade}>
                   {grade}
@@ -403,51 +570,88 @@ function SkillColumn({ title, items }: { title: string; items: string[] }) {
           ) : (
             <span aria-hidden="true" className="skill-empty-grade" />
           )}
-          <input aria-label={`${title} ${index + 1}`} defaultValue={item} />
+          <input
+            aria-label={`${title} ${index + 1}`}
+            value={row.item}
+            onChange={(event) => onChange(replaceArrayItem(rows, index, { ...row, item: event.target.value }))}
+          />
         </label>
       ))}
     </div>
   );
 }
 
-function GearTable({ title, rows, columns, className = "" }: { title: string; rows: string[]; columns: string[]; className?: string }) {
+function GearTable({
+  title,
+  rows,
+  columns,
+  values,
+  onChange,
+  className = "",
+}: {
+  title: string;
+  rows: string[];
+  columns: string[];
+  values: Record<string, GearSlot>;
+  onChange: (values: Record<string, GearSlot>) => void;
+  className?: string;
+}) {
   const isArsenal = title === "Arsenal";
 
   return (
     <section className={`gear-table ${className}`}>
       <h3>{title}</h3>
-      {rows.map((row) => (
-        <div className="gear-row" key={row}>
-          <strong>{row}</strong>
+      {rows.map((rowName) => {
+        const row = values[rowName] || createGearSlot(columns);
+        return (
+        <div className="gear-row" key={rowName}>
+          <strong>{rowName}</strong>
           <div className="gear-entry">
-            <input className="gear-item-name" aria-label={`${title} ${row} item name`} />
+            <input
+              className="gear-item-name"
+              aria-label={`${title} ${rowName} item name`}
+              value={row.itemName}
+              onChange={(event) => onChange({ ...values, [rowName]: { ...row, itemName: event.target.value } })}
+            />
             <div className="gear-stat-grid">
               {columns.map((column) => (
                 <label className={isArsenal && column === "RNG" ? "range-field" : ""} key={column}>
                   <span>{column}</span>
                   <input
-                    aria-label={`${title} ${row} ${column}`}
+                    aria-label={`${title} ${rowName} ${column}`}
                     inputMode={isArsenal && column === "RNG" ? "numeric" : undefined}
-                    onChange={isArsenal && column === "RNG" ? formatNumberInput : undefined}
+                    value={row.stats[column] || ""}
+                    onChange={(event) => {
+                      const nextValue = isArsenal && column === "RNG" ? formatNumberText(event.target.value) : event.target.value;
+                      onChange({ ...values, [rowName]: { ...row, stats: { ...row.stats, [column]: nextValue } } });
+                    }}
                   />
                 </label>
               ))}
             </div>
           </div>
         </div>
-      ))}
+      )})}
     </section>
   );
 }
 
-function GearList({ title, className = "" }: { title: string; className?: string }) {
+function GearList({ title, rows, onChange, className = "" }: { title: string; rows: SheetRow[]; onChange: (rows: SheetRow[]) => void; className?: string }) {
   return (
     <section className={`gear-list ${className}`}>
       <h3>{title}</h3>
-      {Array.from({ length: 12 }).map((_, index) => (
+      {rows.map((row, index) => (
         <div className="gear-list-row" key={index}>
-          <input aria-label={`${title} ${index + 1}`} />
-          <input aria-label={`${title} ${index + 1} note`} />
+          <input
+            aria-label={`${title} ${index + 1}`}
+            value={row.item}
+            onChange={(event) => onChange(replaceArrayItem(rows, index, { ...row, item: event.target.value }))}
+          />
+          <input
+            aria-label={`${title} ${index + 1} note`}
+            value={row.note}
+            onChange={(event) => onChange(replaceArrayItem(rows, index, { ...row, note: event.target.value }))}
+          />
         </div>
       ))}
     </section>
@@ -472,7 +676,7 @@ function mapDbCharacter(character: DbCharacter): CharacterProfile {
   };
 }
 
-function getCharacterUpdate(character: CharacterProfile) {
+function getCharacterUpdate(character: CharacterProfile, sheetData: CharacterSheetData) {
   return {
     name: character.name.trim() || "Unnamed Character",
     class_name: character.className.trim() || "Unchosen Class",
@@ -484,7 +688,158 @@ function getCharacterUpdate(character: CharacterProfile) {
     wounds: character.wounds,
     notes: character.notes,
     attributes: character.attributes,
+    sheet_data: sheetData,
   };
+}
+
+function createDefaultStatusTrack(): StatusTrack {
+  return {
+    current: "",
+    max: "",
+    grade: "F",
+    result: "",
+  };
+}
+
+function createSkillRows(items: string[]) {
+  return Array.from({ length: 9 }, (_, index) => ({
+    grade: "F",
+    item: items[index] || "",
+  }));
+}
+
+function createGearSlot(columns: string[]): GearSlot {
+  return {
+    itemName: "",
+    stats: Object.fromEntries(columns.map((column) => [column, ""])),
+  };
+}
+
+function createGearSlots(rows: string[], columns: string[]) {
+  return Object.fromEntries(rows.map((row) => [row, createGearSlot(columns)]));
+}
+
+function createDefaultSheetData(): CharacterSheetData {
+  return {
+    status: {
+      health: createDefaultStatusTrack(),
+      stamina: createDefaultStatusTrack(),
+      mind: createDefaultStatusTrack(),
+      divinity: createDefaultStatusTrack(),
+    },
+    fatigue: 0,
+    carryingCapacity: {
+      current: "",
+      max: "",
+    },
+    movement: {
+      Sprint: "70",
+      Run: "50",
+      Walk: "14",
+      Sneak: "14",
+    },
+    tension: {
+      PER: "",
+      INS: "",
+      INI: "",
+      AP: "",
+      MOR: "",
+    },
+    defenses: {
+      AGI: "",
+      PRO: "",
+      DEF: "",
+      RES: "",
+    },
+    wallet: {
+      PP: "",
+      GP: "",
+      EP: "",
+      SP: "",
+      CP: "",
+    },
+    skills: {
+      Knowledge: createSkillRows(["History", "Lore", "Politics", "Religion", "Occult", "Arcana", "Nature", "Academia"]),
+      Proficiency: createSkillRows(["Alchemy", "Engineer", "Enchant", "Medicine", "Sorcery", "Primurgy", "Thaumaturgy", "Theurgy", "Goetia"]),
+      Skill: createSkillRows(["Athletics", "Acrobatics", "Stealth", "Survival", "Riding", "Thievery", "Incanting"]),
+      Ability: createSkillRows(["Investigation", "First Aid", "Focus", "Perform"]),
+    },
+    gear: Array.from({ length: 12 }, () => ({ item: "", note: "" })),
+    arsenal: createGearSlots(["Main 1", "Off 1", "Main 2", "Off 2"], ["RNG", "ATK", "PEN"]),
+    armory: createGearSlots(["Head", "Body", "Hands", "Feet"], ["PRO", "DEF", "RES"]),
+    accessories: createGearSlots(["Ears", "Neck", "Wrists", "Rings"], ["PRO", "DEF", "RES"]),
+  };
+}
+
+function normalizeSheetData(sheetData?: Partial<CharacterSheetData> | null): CharacterSheetData {
+  const defaults = createDefaultSheetData();
+  if (!sheetData) return defaults;
+
+  return {
+    ...defaults,
+    ...sheetData,
+    status: {
+      ...defaults.status,
+      ...sheetData.status,
+    },
+    carryingCapacity: {
+      ...defaults.carryingCapacity,
+      ...sheetData.carryingCapacity,
+    },
+    movement: {
+      ...defaults.movement,
+      ...sheetData.movement,
+    },
+    tension: {
+      ...defaults.tension,
+      ...sheetData.tension,
+    },
+    defenses: {
+      ...defaults.defenses,
+      ...sheetData.defenses,
+    },
+    wallet: {
+      ...defaults.wallet,
+      ...sheetData.wallet,
+    },
+    skills: {
+      Knowledge: normalizeRows(sheetData.skills?.Knowledge, defaults.skills.Knowledge),
+      Proficiency: normalizeRows(sheetData.skills?.Proficiency, defaults.skills.Proficiency),
+      Skill: normalizeRows(sheetData.skills?.Skill, defaults.skills.Skill),
+      Ability: normalizeRows(sheetData.skills?.Ability, defaults.skills.Ability),
+    },
+    gear: normalizeRows(sheetData.gear, defaults.gear),
+    arsenal: normalizeGearSlots(sheetData.arsenal, defaults.arsenal),
+    armory: normalizeGearSlots(sheetData.armory, defaults.armory),
+    accessories: normalizeGearSlots(sheetData.accessories, defaults.accessories),
+  };
+}
+
+function normalizeRows<T extends Record<string, string>>(rows: T[] | undefined, defaults: T[]) {
+  return defaults.map((defaultRow, index) => ({
+    ...defaultRow,
+    ...rows?.[index],
+  }));
+}
+
+function normalizeGearSlots(slots: Record<string, GearSlot> | undefined, defaults: Record<string, GearSlot>) {
+  return Object.fromEntries(
+    Object.entries(defaults).map(([row, defaultSlot]) => [
+      row,
+      {
+        ...defaultSlot,
+        ...slots?.[row],
+        stats: {
+          ...defaultSlot.stats,
+          ...slots?.[row]?.stats,
+        },
+      },
+    ]),
+  );
+}
+
+function replaceArrayItem<T>(items: T[], index: number, nextItem: T) {
+  return items.map((item, itemIndex) => (itemIndex === index ? nextItem : item));
 }
 
 function normalizeAttributes(attributes: Record<string, number | undefined>): CharacterProfile["attributes"] {
@@ -511,9 +866,9 @@ function parseNumber(value: string) {
   return Number(digits);
 }
 
-function formatNumberInput(event: ChangeEvent<HTMLInputElement>) {
-  const parsed = parseNumber(event.target.value);
-  event.target.value = event.target.value.trim() ? formatNumber(parsed) : "";
+function formatNumberText(value: string) {
+  const parsed = parseNumber(value);
+  return value.trim() ? formatNumber(parsed) : "";
 }
 
 function clampAttributeValue(value: number) {
