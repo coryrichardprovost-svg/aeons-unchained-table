@@ -1514,6 +1514,41 @@ h1 {
   background: rgba(66, 180, 168, 0.08);
 }
 
+.market-value-cell {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+}
+
+.market-value-cell select,
+.market-value-cell input {
+  min-width: 0;
+  min-height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  outline: none;
+}
+
+.market-value-cell select {
+  border-right: 1px solid var(--line);
+  padding: 0 18px 0 8px;
+  cursor: pointer;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 7px center / 8px 8px no-repeat,
+    transparent;
+}
+
+.market-value-cell input {
+  padding: 0 8px;
+  text-align: right;
+}
+
+.market-value-cell:focus-within {
+  background: rgba(66, 180, 168, 0.08);
+}
+
 .market-delete-row-button {
   color: #ffb4a8;
   cursor: pointer;

@@ -37,6 +37,7 @@ const columnLabels: Record<string, string> = {
   value: "Value",
   weight: "Weight",
 };
+const coinTypes = ["CP", "SP", "EP", "GP", "PP"];
 
 export function ChroniclerMarketItemsPage() {
   const [itemTypes, setItemTypes] = useState<ItemTypeRecord[]>([]);
@@ -292,14 +293,18 @@ export function ChroniclerMarketItemsPage() {
 
               {activeItems.map((item) => (
                 <div className="market-item-row" key={item.id}>
-                  {activeType.columns.map((column) => (
-                    <input
-                      key={column}
-                      value={getItemValue(item, column)}
-                      onChange={(event) => updateItem(item.id, column, event.target.value)}
-                      aria-label={`${activeType.name} ${columnLabels[column] || column}`}
-                    />
-                  ))}
+                  {activeType.columns.map((column) =>
+                    column === "value" ? (
+                      <ValueCell item={item} key={column} onChange={(value) => updateItem(item.id, column, value)} />
+                    ) : (
+                      <input
+                        key={column}
+                        value={getItemValue(item, column)}
+                        onChange={(event) => updateItem(item.id, column, event.target.value)}
+                        aria-label={`${activeType.name} ${columnLabels[column] || column}`}
+                      />
+                    ),
+                  )}
                   <button className="market-delete-row-button" onClick={() => deleteItem(item)} aria-label={`Delete ${item.name || "item"}`}>
                     Delete
                   </button>
@@ -323,6 +328,34 @@ export function ChroniclerMarketItemsPage() {
           <span>Run the market items migration, then return here.</span>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function ValueCell({ item, onChange }: { item: ItemRecord; onChange: (value: string) => void }) {
+  const parsedValue = parseValue(item.value);
+
+  function updateValue(patch: Partial<{ amount: string; coin: string }>) {
+    const amount = patch.amount ?? parsedValue.amount;
+    const coin = patch.coin ?? parsedValue.coin;
+    onChange(`${amount} ${coin}`.trim());
+  }
+
+  return (
+    <div className="market-value-cell">
+      <select value={parsedValue.coin} onChange={(event) => updateValue({ coin: event.target.value })} aria-label={`${item.name || "Item"} coin type`}>
+        {coinTypes.map((coinType) => (
+          <option value={coinType} key={coinType}>
+            {coinType}
+          </option>
+        ))}
+      </select>
+      <input
+        inputMode="decimal"
+        value={parsedValue.amount}
+        onChange={(event) => updateValue({ amount: event.target.value })}
+        aria-label={`${item.name || "Item"} coin amount`}
+      />
     </div>
   );
 }
@@ -381,4 +414,16 @@ function getNewTypeName(itemTypes: ItemTypeRecord[]) {
   let index = 2;
   while (existingNames.has(`${baseName} ${index}`)) index += 1;
   return `${baseName} ${index}`;
+}
+
+function parseValue(value: string) {
+  const trimmedValue = value.trim();
+  const coinMatch = trimmedValue.match(/\b(CP|SP|EP|GP|PP)\b/i);
+  const coin = coinMatch ? coinMatch[1].toUpperCase() : "CP";
+  const amount = trimmedValue.replace(/\b(CP|SP|EP|GP|PP)\b/i, "").trim();
+
+  return {
+    amount,
+    coin,
+  };
 }
