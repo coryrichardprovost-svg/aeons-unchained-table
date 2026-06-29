@@ -5,6 +5,8 @@ export type ClassFeature = {
   name: string;
   description: string;
   level: string;
+  mpCost: string;
+  spCost: string;
 };
 
 export type SubClassRecord = {
@@ -33,6 +35,8 @@ export function createBlankFeature(): ClassFeature {
     name: "",
     description: "",
     level: "1",
+    mpCost: "",
+    spCost: "",
   };
 }
 

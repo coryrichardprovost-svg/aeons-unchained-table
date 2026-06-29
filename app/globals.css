@@ -897,7 +897,7 @@ h1 {
 .class-feature-row {
   min-width: 860px;
   display: grid;
-  grid-template-columns: minmax(120px, 0.55fr) minmax(170px, 0.9fr) minmax(340px, 1.65fr) 128px;
+  grid-template-columns: 72px minmax(170px, 0.9fr) minmax(340px, 1.65fr) 112px 64px 64px;
 }
 
 .class-feature-head {
@@ -916,6 +916,13 @@ h1 {
   color: var(--ink);
   padding: 0 9px;
   outline: none;
+}
+
+.class-feature-row > :first-child,
+.class-feature-row > :nth-child(4),
+.class-feature-row > :nth-child(5),
+.class-feature-row > :nth-child(6) {
+  text-align: center;
 }
 
 .class-feature-row > *:last-child {

@@ -254,10 +254,22 @@ function FeatureEditor({
           <strong>Name</strong>
           <strong>Description</strong>
           <strong>Required Level</strong>
+          <strong>MP</strong>
+          <strong>SP</strong>
         </div>
         {features.map((feature, index) => (
           <div className="class-feature-row" key={index}>
-            <input value={feature.slot} onChange={(event) => onChange(index, { ...feature, slot: event.target.value })} />
+            <select value={feature.slot} onChange={(event) => onChange(index, { ...feature, slot: event.target.value })}>
+              <option value="">-</option>
+              {Array.from({ length: 10 }).map((_, slotIndex) => {
+                const slot = `${slotIndex + 1}`;
+                return (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                );
+              })}
+            </select>
             <input value={feature.name} onChange={(event) => onChange(index, { ...feature, name: event.target.value })} />
             <input value={feature.description} onChange={(event) => onChange(index, { ...feature, description: event.target.value })} />
             <select value={feature.level} onChange={(event) => onChange(index, { ...feature, level: event.target.value })}>
@@ -267,6 +279,8 @@ function FeatureEditor({
                 </option>
               ))}
             </select>
+            <input inputMode="numeric" value={feature.mpCost} onChange={(event) => onChange(index, { ...feature, mpCost: formatNumberText(event.target.value) })} />
+            <input inputMode="numeric" value={feature.spCost} onChange={(event) => onChange(index, { ...feature, spCost: formatNumberText(event.target.value) })} />
           </div>
         ))}
       </div>
@@ -279,4 +293,10 @@ function formatSignedNumber(value: string) {
   const digits = value.replace(/[^\d]/g, "");
   if (!digits) return "";
   return `${sign}${Number(digits)}`;
+}
+
+function formatNumberText(value: string) {
+  const digits = value.replace(/[^\d]/g, "");
+  if (!digits) return "";
+  return `${Number(digits)}`;
 }
