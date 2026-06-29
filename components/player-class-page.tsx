@@ -246,7 +246,9 @@ function AttributeBonusSummary({ classRecord }: { classRecord: GameClassRecord }
 }
 
 function FeatureList({ title, features }: { title: string; features: ClassFeature[] }) {
-  const visibleFeatures = features.filter((feature) => feature.name || feature.description);
+  const visibleFeatures = features
+    .map((feature, index) => ({ feature, slot: index + 1 }))
+    .filter(({ feature }) => feature.name || feature.description);
 
   return (
     <section className="class-builder-section">
@@ -255,12 +257,12 @@ function FeatureList({ title, features }: { title: string; features: ClassFeatur
         <span className="tag teal">{visibleFeatures.length}</span>
       </div>
       <div className="class-read-feature-list">
-        {visibleFeatures.map((feature, index) => (
-          <div className="class-read-feature" key={`${feature.name}-${index}`}>
+        {visibleFeatures.map(({ feature, slot }) => (
+          <div className="class-read-feature" key={`${feature.name}-${slot}`}>
             <div>
               <strong>{feature.name || "Unnamed"}</strong>
               <span>
-                {feature.slot ? `Slot ${feature.slot} / ` : ""}Level {feature.level}
+                Slot {slot} / Level {feature.level}
                 {feature.mpCost ? ` / ${feature.mpCost} MP` : ""}
                 {feature.spCost ? ` / ${feature.spCost} SP` : ""}
               </span>

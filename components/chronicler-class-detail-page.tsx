@@ -259,17 +259,7 @@ function FeatureEditor({
         </div>
         {features.map((feature, index) => (
           <div className="class-feature-row" key={index}>
-            <select value={feature.slot} onChange={(event) => onChange(index, { ...feature, slot: event.target.value })}>
-              <option value="">-</option>
-              {Array.from({ length: 10 }).map((_, slotIndex) => {
-                const slot = `${slotIndex + 1}`;
-                return (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                );
-              })}
-            </select>
+            <span>{index + 1}</span>
             <input value={feature.name} onChange={(event) => onChange(index, { ...feature, name: event.target.value })} />
             <input value={feature.description} onChange={(event) => onChange(index, { ...feature, description: event.target.value })} />
             <select value={feature.level} onChange={(event) => onChange(index, { ...feature, level: event.target.value })}>
