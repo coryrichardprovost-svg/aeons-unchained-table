@@ -415,8 +415,7 @@ function AtlasAreaSummary({
   const childLocations = getChildLocations(location.id, locations);
   const groupedChildLocations = groupLocationsByType(childLocations);
   const specialLocationCount = getSpecialLocationCount(location.id, locations);
-  const branchIds = getLocationBranchIds(location.id, locations);
-  const locationNpcs = npcs.filter((npc) => npc.location_id && branchIds.includes(npc.location_id));
+  const locationNpcs = npcs.filter((npc) => npc.location_id === location.id);
 
   return (
     <div className="atlas-area-summary">
