@@ -117,7 +117,7 @@ export function PlayerClassPage() {
 
     const saveTimer = window.setTimeout(async () => {
       const supabase = createClient();
-      const nextClassName = selectedClass?.name || "Unchosen Class";
+      const nextClassName = getDisplayedClassName(selectedClass, selectedSubclass);
       const nextSheetData = {
         ...sheetData,
         selectedClassId,
@@ -142,7 +142,7 @@ export function PlayerClassPage() {
     }, 700);
 
     return () => window.clearTimeout(saveTimer);
-  }, [character, progress, selectedClass, selectedClassId, sheetData]);
+  }, [character, progress, selectedClass, selectedClassId, selectedSubclass, sheetData]);
 
   function chooseClass(classId: string) {
     setSelectedClassId(classId);
@@ -410,6 +410,16 @@ function createDefaultProgress(): ClassProgressData {
     selectedSubclassId: "",
     ranks: {},
   };
+}
+
+function getDisplayedClassName(selectedClass: GameClassRecord | null, selectedSubclass: SubClassRecord | null) {
+  const subclassName = selectedSubclass?.name.trim();
+  if (subclassName) return subclassName;
+
+  const className = selectedClass?.name.trim();
+  if (className) return className;
+
+  return "Unchosen Class";
 }
 
 function normalizeProgress(progress: unknown): ClassProgressData {
