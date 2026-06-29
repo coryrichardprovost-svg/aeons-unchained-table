@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { CharacterProfile } from "@/data/domain";
-import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/browser";
 
 type DbCharacter = {
@@ -28,7 +27,6 @@ export function PlayerCharacterDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const hasLoadedAutoSave = useRef(false);
-  const skipNextAutoSave = useRef(false);
 
   const loadCharacter = useCallback(async () => {
     const characterId = window.localStorage.getItem("aeons:selectedCharacterId");
@@ -66,11 +64,6 @@ export function PlayerCharacterDashboard() {
       return;
     }
 
-    if (skipNextAutoSave.current) {
-      skipNextAutoSave.current = false;
-      return;
-    }
-
     const saveTimer = window.setTimeout(async () => {
       const supabase = createClient();
       setMessage("Saving changes...");
@@ -87,27 +80,6 @@ export function PlayerCharacterDashboard() {
 
     return () => window.clearTimeout(saveTimer);
   }, [character]);
-
-  async function saveCharacter() {
-    if (!character) return;
-
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("characters")
-      .update(getCharacterUpdate(character))
-      .eq("id", character.id)
-      .select("*")
-      .single();
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    skipNextAutoSave.current = true;
-    setCharacter(mapDbCharacter(data as DbCharacter));
-    setMessage("Character saved.");
-  }
 
   if (isLoading) {
     return (
@@ -295,14 +267,6 @@ export function PlayerCharacterDashboard() {
         </footer>
       </section>
 
-      <div className="license-dashboard-actions">
-        <button className="primary-inline-button" onClick={saveCharacter}>
-          <Icon name="scroll" /> Save License
-        </button>
-        <Link className="secondary-button" href="/player/characters">
-          Change Character
-        </Link>
-      </div>
     </div>
   );
 }
