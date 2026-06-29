@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ChroniclerClassesPage } from "@/components/chronicler-classes-page";
 import { DetailPage, TablePage } from "@/components/detail-page";
 import { StagePage } from "@/components/stage-page";
 import { WorkspaceShell } from "@/components/workspace-shell";
@@ -34,6 +35,11 @@ const titles = {
     eyebrow: "Markets and Items",
     title: "Regional Prices and Shared Items",
     copy: "Create items, edit prices by region, and keep Trailblazer inventory data synced to the same source of truth.",
+  },
+  classes: {
+    eyebrow: "Class Builder",
+    title: "Classes, Subclasses, Skills, and Abilities",
+    copy: "Create basic classes, add attribute bonuses, maintain class skills and abilities, and build subclass evolutions.",
   },
   rules: {
     eyebrow: "Rules Library",
@@ -178,6 +184,8 @@ function DmContent({ view }: { view: DmView }) {
       />
     );
   }
+
+  if (view === "classes") return <ChroniclerClassesPage />;
 
   if (view === "rules") {
     return (

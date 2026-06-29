@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DetailPage } from "@/components/detail-page";
 import { InventoryPage } from "@/components/inventory-page";
+import { PlayerClassPage } from "@/components/player-class-page";
 import { PlayerSheetPage } from "@/components/player-sheet-page";
 import { StagePage } from "@/components/stage-page";
 import { WorkspaceShell } from "@/components/workspace-shell";
@@ -67,16 +68,7 @@ export default async function TrailblazerRoutePage({ params }: { params: Promise
 
 function TrailblazerContent({ view }: { view: TrailblazerView }) {
   if (view === "inventory") return <InventoryPage />;
-  if (view === "class") {
-    return (
-      <DetailPage
-        mainTitle="Class Features"
-        items={abilities.slice(0, 3)}
-        sideTitle="Progression Track"
-        sideItems={["Level 6: Oath recovery feature", "Level 7: Advanced warding stance", "Level 8: Ability improvement"]}
-      />
-    );
-  }
+  if (view === "class") return <PlayerClassPage />;
   if (view === "knowledge") {
     return (
       <DetailPage

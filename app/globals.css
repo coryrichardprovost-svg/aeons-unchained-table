@@ -239,7 +239,8 @@ h1 {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--line);
@@ -256,8 +257,14 @@ h1 {
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   border-color: rgba(66, 180, 168, 0.72);
+}
+
+.field select {
+  appearance: none;
+  cursor: pointer;
 }
 
 .form-message {
@@ -745,6 +752,176 @@ h1 {
   padding: 0 10px;
   color: var(--muted);
   background: rgba(17, 16, 14, 0.22);
+}
+
+.class-builder-layout,
+.player-class-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.35fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 22px;
+  align-items: start;
+}
+
+.class-builder-message {
+  grid-column: 1 / -1;
+}
+
+.class-rail {
+  display: grid;
+  gap: 14px;
+}
+
+.class-editor-panel,
+.class-view-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.class-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  gap: 14px;
+}
+
+.class-builder-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.04);
+}
+
+.class-bonus-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(64px, 1fr));
+  gap: 8px;
+}
+
+.class-bonus-grid label,
+.class-bonus-read {
+  min-height: 70px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(17, 16, 14, 0.28);
+}
+
+.class-bonus-grid label span,
+.class-bonus-read span {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.class-bonus-grid input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(244, 239, 226, 0.055);
+  color: var(--ink);
+  text-align: center;
+  outline: none;
+}
+
+.class-bonus-read strong {
+  font-size: 20px;
+}
+
+.class-feature-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.class-feature-table {
+  overflow-x: auto;
+}
+
+.class-feature-row {
+  min-width: 620px;
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(260px, 1.5fr) 86px;
+}
+
+.class-feature-head {
+  background: rgba(244, 239, 226, 0.075);
+  color: var(--gold);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.class-feature-row > * {
+  min-height: 38px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(244, 239, 226, 0.035);
+  color: var(--ink);
+  padding: 0 9px;
+  outline: none;
+}
+
+.class-feature-row > *:last-child {
+  border-right: 0;
+}
+
+.class-feature-row select {
+  appearance: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+.subclass-stack,
+.subclass-read-list,
+.class-read-feature-list {
+  display: grid;
+  gap: 12px;
+}
+
+.subclass-editor,
+.subclass-read-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 16, 14, 0.28);
+}
+
+.class-choice-summary {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.045);
+}
+
+.class-read-feature {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 16, 14, 0.28);
+}
+
+.class-read-feature div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.class-read-feature span {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 ul {
@@ -1866,7 +2043,9 @@ ul {
   .workspace,
   .content-grid,
   .stage-layout,
-  .character-select-layout {
+  .character-select-layout,
+  .class-builder-layout,
+  .player-class-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1884,8 +2063,14 @@ ul {
   .split-two,
   .form-grid,
   .profile-grid,
-  .license-summary-grid {
+  .license-summary-grid,
+  .class-editor-grid,
+  .class-feature-panels {
     grid-template-columns: 1fr;
+  }
+
+  .class-bonus-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .license-dashboard {
@@ -2061,7 +2246,8 @@ ul {
   }
 
   .license-left-lower-grid,
-  .license-skill-table {
+  .license-skill-table,
+  .class-bonus-grid {
     grid-template-columns: 1fr;
   }
 
