@@ -27,12 +27,34 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
 button {
   cursor: pointer;
+}
+
+select {
+  color-scheme: dark;
+  color: var(--ink);
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 10px center / 9px 9px no-repeat,
+    rgba(27, 25, 21, 0.96);
+  border-color: var(--line);
+  appearance: none;
+  padding-right: 30px;
+}
+
+select option {
+  color: var(--ink);
+  background: #1b1915;
+}
+
+select:disabled {
+  color: var(--muted);
+  background-color: rgba(244, 239, 226, 0.035);
 }
 
 a {
@@ -263,8 +285,11 @@ h1 {
 }
 
 .field select {
-  appearance: none;
   cursor: pointer;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 10px center / 9px 9px no-repeat,
+    rgba(27, 25, 21, 0.96);
+  padding-right: 30px;
 }
 
 .form-message {
@@ -839,9 +864,11 @@ h1 {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: rgba(244, 239, 226, 0.06);
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 10px center / 9px 9px no-repeat,
+    rgba(27, 25, 21, 0.96);
   color: var(--ink);
-  padding: 0 10px;
+  padding: 0 30px 0 10px;
   outline: none;
 }
 
@@ -1096,9 +1123,12 @@ h1 {
 }
 
 .class-feature-row select {
-  appearance: none;
   cursor: pointer;
   text-align: center;
+  text-align-last: center;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 7px center / 8px 8px no-repeat,
+    rgba(27, 25, 21, 0.96);
 }
 
 .subclass-stack,
@@ -1202,10 +1232,17 @@ h1 {
   width: 100%;
   min-height: 100%;
   border: 0;
-  background: rgba(244, 239, 226, 0.045);
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 10px center / 9px 9px no-repeat,
+    rgba(27, 25, 21, 0.96);
   color: var(--ink);
-  padding: 0 10px;
+  padding: 0 30px 0 10px;
   outline: none;
+}
+
+.player-exp-panel input {
+  background: rgba(244, 239, 226, 0.045);
+  padding: 0 10px;
 }
 
 .player-exp-panel input {
@@ -1329,7 +1366,9 @@ h1 {
 .player-feature-cost-row select {
   width: 100%;
   border: 0;
-  background: rgba(211, 168, 75, 0.08);
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 7px center / 8px 8px no-repeat,
+    rgba(27, 25, 21, 0.96);
   color: var(--gold);
   outline: none;
   text-align: center;
@@ -1569,6 +1608,13 @@ ul {
   font: inherit;
   text-align: center;
   outline: none;
+}
+
+.paper-license select {
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 7px center / 8px 8px no-repeat,
+    rgba(27, 25, 21, 0.96);
+  color: var(--gold);
 }
 
 .paper-license input:focus,
@@ -1988,16 +2034,17 @@ ul {
 .skill-column select {
   width: 100%;
   min-width: 0;
-  appearance: none;
   cursor: pointer;
   color: var(--gold);
-  background: rgba(211, 168, 75, 0.06);
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 4px center / 7px 7px no-repeat,
+    rgba(27, 25, 21, 0.96);
   border-right: 1px solid var(--line);
   text-align: center;
   text-align-last: center;
   font-size: 10px;
   font-weight: 800;
-  padding: 0;
+  padding: 0 10px 0 0;
 }
 
 .skill-empty-grade {
