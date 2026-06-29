@@ -1462,6 +1462,26 @@ h1 {
   font-weight: 800;
 }
 
+.market-custom-type-heading {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.market-delete-type-button {
+  min-height: 40px;
+  border: 1px solid rgba(255, 180, 168, 0.32);
+  border-radius: 8px;
+  background: rgba(146, 51, 42, 0.1);
+  color: #ffb4a8;
+  padding: 0 12px;
+}
+
+.market-delete-type-button:hover {
+  background: rgba(146, 51, 42, 0.18);
+}
+
 .market-item-table-wrap {
   display: grid;
   gap: 12px;
@@ -1516,13 +1536,21 @@ h1 {
 
 .market-value-cell {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 60px;
+  gap: 0;
+  padding: 0;
+}
+
+.market-weight-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
   gap: 0;
   padding: 0;
 }
 
 .market-value-cell select,
-.market-value-cell input {
+.market-value-cell input,
+.market-weight-cell input {
   min-width: 0;
   min-height: 100%;
   border: 0;
@@ -1532,20 +1560,31 @@ h1 {
 }
 
 .market-value-cell select {
-  border-right: 1px solid var(--line);
-  padding: 0 18px 0 8px;
+  border-left: 1px solid var(--line);
+  padding: 0 18px 0 7px;
   cursor: pointer;
   background:
     linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 7px center / 8px 8px no-repeat,
     transparent;
 }
 
-.market-value-cell input {
+.market-value-cell input,
+.market-weight-cell input {
   padding: 0 8px;
   text-align: right;
 }
 
-.market-value-cell:focus-within {
+.market-weight-cell span {
+  display: grid;
+  place-items: center;
+  border-left: 1px solid var(--line);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.market-value-cell:focus-within,
+.market-weight-cell:focus-within {
   background: rgba(66, 180, 168, 0.08);
 }
 

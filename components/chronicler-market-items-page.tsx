@@ -63,7 +63,7 @@ export function ChroniclerMarketItemsPage() {
       return;
     }
 
-    const normalizedTypes = ((typeData || []) as Partial<ItemTypeRecord>[]).map(normalizeItemType);
+    const normalizedTypes = sortItemTypes(((typeData || []) as Partial<ItemTypeRecord>[]).map(normalizeItemType));
     setItemTypes(normalizedTypes);
     setItems(((itemData || []) as Partial<ItemRecord>[]).map(normalizeItem));
     setActiveTypeId(normalizedTypes[0]?.id || "");
@@ -103,7 +103,7 @@ export function ChroniclerMarketItemsPage() {
         name: getNewTypeName(itemTypes),
         columns: defaultCustomColumns,
         is_default: false,
-        sort_order: itemTypes.length + 1,
+        sort_order: getNextCustomSortOrder(itemTypes),
       })
       .select("*")
       .single();
@@ -114,7 +114,7 @@ export function ChroniclerMarketItemsPage() {
     }
 
     const savedType = normalizeItemType(data as Partial<ItemTypeRecord>);
-    setItemTypes((current) => [...current, savedType]);
+    setItemTypes((current) => sortItemTypes([...current, savedType]));
     setActiveTypeId(savedType.id);
     setSearchTerm("");
     setMessage("Item type created.");
@@ -164,6 +164,28 @@ export function ChroniclerMarketItemsPage() {
     window.clearTimeout(itemSaveTimers.current[item.id]);
     setItems((current) => current.filter((candidate) => candidate.id !== item.id));
     setMessage("Item deleted.");
+  }
+
+  async function deleteItemType(itemType: ItemTypeRecord) {
+    if (itemType.is_default) return;
+
+    const supabase = createClient();
+    setMessage(`Deleting ${itemType.name || "item type"}...`);
+
+    const { error } = await supabase.from("item_types").delete().eq("id", itemType.id);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    window.clearTimeout(typeSaveTimers.current[itemType.id]);
+    const remainingTypes = sortItemTypes(itemTypes.filter((candidate) => candidate.id !== itemType.id));
+    setItemTypes(remainingTypes);
+    setItems((current) => current.filter((item) => item.item_type_id !== itemType.id));
+    setActiveTypeId(remainingTypes[0]?.id || "");
+    setSearchTerm("");
+    setMessage("Item type deleted.");
   }
 
   function updateTypeName(typeId: string, value: string) {
@@ -265,10 +287,15 @@ export function ChroniclerMarketItemsPage() {
                   <span>{activeItems.length} matching item{activeItems.length === 1 ? "" : "s"}</span>
                 </div>
               ) : (
-                <label className="market-type-name-field">
-                  <span>Custom Type Name</span>
-                  <input value={activeType.name} onChange={(event) => updateTypeName(activeType.id, event.target.value)} />
-                </label>
+                <div className="market-custom-type-heading">
+                  <label className="market-type-name-field">
+                    <span>Custom Type Name</span>
+                    <input value={activeType.name} onChange={(event) => updateTypeName(activeType.id, event.target.value)} />
+                  </label>
+                  <button className="market-delete-type-button" onClick={() => deleteItemType(activeType)}>
+                    Delete Table
+                  </button>
+                </div>
               )}
             </div>
             <div className="market-item-table-actions">
@@ -296,6 +323,8 @@ export function ChroniclerMarketItemsPage() {
                   {activeType.columns.map((column) =>
                     column === "value" ? (
                       <ValueCell item={item} key={column} onChange={(value) => updateItem(item.id, column, value)} />
+                    ) : column === "weight" ? (
+                      <WeightCell item={item} key={column} onChange={(value) => updateItem(item.id, column, value)} />
                     ) : (
                       <input
                         key={column}
@@ -343,6 +372,12 @@ function ValueCell({ item, onChange }: { item: ItemRecord; onChange: (value: str
 
   return (
     <div className="market-value-cell">
+      <input
+        inputMode="decimal"
+        value={parsedValue.amount}
+        onChange={(event) => updateValue({ amount: event.target.value })}
+        aria-label={`${item.name || "Item"} coin amount`}
+      />
       <select value={parsedValue.coin} onChange={(event) => updateValue({ coin: event.target.value })} aria-label={`${item.name || "Item"} coin type`}>
         {coinTypes.map((coinType) => (
           <option value={coinType} key={coinType}>
@@ -350,12 +385,15 @@ function ValueCell({ item, onChange }: { item: ItemRecord; onChange: (value: str
           </option>
         ))}
       </select>
-      <input
-        inputMode="decimal"
-        value={parsedValue.amount}
-        onChange={(event) => updateValue({ amount: event.target.value })}
-        aria-label={`${item.name || "Item"} coin amount`}
-      />
+    </div>
+  );
+}
+
+function WeightCell({ item, onChange }: { item: ItemRecord; onChange: (value: string) => void }) {
+  return (
+    <div className="market-weight-cell">
+      <input inputMode="decimal" value={item.weight} onChange={(event) => onChange(event.target.value)} aria-label={`${item.name || "Item"} weight`} />
+      <span>KG</span>
     </div>
   );
 }
@@ -401,6 +439,8 @@ function getGridColumns(columns: string[]) {
     .map((column) => {
       if (column === "description") return "minmax(260px, 1.7fr)";
       if (column === "name") return "minmax(160px, 1fr)";
+      if (column === "value") return "132px";
+      if (column === "weight") return "104px";
       return "minmax(108px, 0.75fr)";
     })
     .join(" ")} 78px`;
@@ -426,4 +466,17 @@ function parseValue(value: string) {
     amount,
     coin,
   };
+}
+
+function sortItemTypes(itemTypes: ItemTypeRecord[]) {
+  return [...itemTypes].sort((left, right) => {
+    if (left.is_default !== right.is_default) return left.is_default ? -1 : 1;
+    if (left.sort_order !== right.sort_order) return left.sort_order - right.sort_order;
+    return left.name.localeCompare(right.name);
+  });
+}
+
+function getNextCustomSortOrder(itemTypes: ItemTypeRecord[]) {
+  const customSortOrders = itemTypes.filter((itemType) => !itemType.is_default).map((itemType) => itemType.sort_order);
+  return Math.max(100, ...customSortOrders) + 10;
 }
