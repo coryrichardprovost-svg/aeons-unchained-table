@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ChroniclerClassesPage } from "@/components/chronicler-classes-page";
+import { ChroniclerMarketDashboard } from "@/components/chronicler-market-dashboard";
 import { ChroniclerNpcsPage } from "@/components/chronicler-npcs-page";
 import { ChroniclerWorldAtlasPage } from "@/components/chronicler-world-atlas-page";
 import { DetailPage, TablePage } from "@/components/detail-page";
@@ -143,21 +144,7 @@ function DmContent({ view }: { view: DmView }) {
     );
   }
 
-  if (view === "market") {
-    return (
-      <DetailPage
-        mainTitle="Shared Item and Price Data"
-        items={[
-          ["Item Catalog", "The canonical item list Trailblazer inventories use."],
-          ["Regional Pricing", "Price modifiers based on where the party is."],
-          ["Availability", "Control what can be bought in each region."],
-          ["Equipment Slots", "Weapons and armor can connect to License displays."],
-        ]}
-        sideTitle="Market Controls"
-        sideItems={["Base price", "Region modifier", "Rarity", "Stock", "License visibility"]}
-      />
-    );
-  }
+  if (view === "market") return <ChroniclerMarketDashboard />;
 
   if (view === "classes") return <ChroniclerClassesPage />;
 

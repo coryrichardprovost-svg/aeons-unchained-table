@@ -150,6 +150,38 @@ create table public.npcs (
   updated_at timestamptz not null default now()
 );
 
+create table public.item_types (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid references public.profiles(id) on delete set null,
+  name text not null unique,
+  columns jsonb not null default '["name", "description", "value", "weight"]'::jsonb,
+  is_default boolean not null default false,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.items (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid references public.profiles(id) on delete set null,
+  item_type_id uuid not null references public.item_types(id) on delete cascade,
+  name text not null default 'New Item',
+  description text not null default '',
+  value text not null default '',
+  weight text not null default '',
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.item_types (name, columns, is_default, sort_order)
+values
+  ('Consumables', '["name", "description", "effect", "value", "weight"]'::jsonb, true, 10),
+  ('Armor', '["name", "description", "defense", "protection", "resistance", "value", "weight"]'::jsonb, true, 20),
+  ('Arsenal', '["name", "description", "range", "attack", "penetration", "value", "weight"]'::jsonb, true, 30),
+  ('Accessories', '["name", "description", "protection", "defense", "resistance", "value", "weight"]'::jsonb, true, 40),
+  ('Miscellaneous', '["name", "description", "value", "weight"]'::jsonb, true, 50);
+
 create table public.campaign_invites (
   id uuid primary key default gen_random_uuid(),
   campaign_id uuid not null references public.campaigns(id) on delete cascade,
@@ -176,6 +208,8 @@ grant select, insert, update, delete on public.characters to authenticated;
 grant select, insert, update, delete on public.game_classes to authenticated;
 grant select, insert, update, delete on public.world_locations to authenticated;
 grant select, insert, update, delete on public.npcs to authenticated;
+grant select, insert, update, delete on public.item_types to authenticated;
+grant select, insert, update, delete on public.items to authenticated;
 grant select on public.campaign_members to authenticated;
 
 create or replace function public.set_updated_at()
@@ -210,6 +244,14 @@ for each row execute function public.set_updated_at();
 
 create trigger npcs_set_updated_at
 before update on public.npcs
+for each row execute function public.set_updated_at();
+
+create trigger item_types_set_updated_at
+before update on public.item_types
+for each row execute function public.set_updated_at();
+
+create trigger items_set_updated_at
+before update on public.items
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_auth_user()
@@ -275,6 +317,8 @@ alter table public.characters enable row level security;
 alter table public.game_classes enable row level security;
 alter table public.world_locations enable row level security;
 alter table public.npcs enable row level security;
+alter table public.item_types enable row level security;
+alter table public.items enable row level security;
 alter table public.campaign_invites enable row level security;
 alter table public.campaign_members enable row level security;
 
@@ -470,6 +514,104 @@ with check (
 
 create policy "chroniclers can delete npcs"
 on public.npcs for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "authenticated users can read item types"
+on public.item_types for select
+to authenticated
+using (true);
+
+create policy "chroniclers can create item types"
+on public.item_types for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "chroniclers can update item types"
+on public.item_types for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "chroniclers can delete item types"
+on public.item_types for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "authenticated users can read items"
+on public.items for select
+to authenticated
+using (true);
+
+create policy "chroniclers can create items"
+on public.items for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "chroniclers can update items"
+on public.items for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "chroniclers can delete items"
+on public.items for delete
 to authenticated
 using (
   exists (
