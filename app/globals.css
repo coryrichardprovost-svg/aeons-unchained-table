@@ -897,6 +897,27 @@ h1 {
   min-height: 180px;
 }
 
+.atlas-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(168, 70, 77, 0.42);
+  border-radius: 8px;
+  background: rgba(168, 70, 77, 0.08);
+}
+
+.atlas-danger-zone div {
+  display: grid;
+  gap: 4px;
+}
+
+.atlas-danger-zone span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .class-builder-layout,
 .player-class-layout {
   display: grid;

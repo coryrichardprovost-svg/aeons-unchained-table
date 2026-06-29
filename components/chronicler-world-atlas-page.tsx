@@ -27,6 +27,7 @@ export function ChroniclerWorldAtlasPage() {
   const [placeId, setPlaceId] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [isBackendOpen, setIsBackendOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<WorldLocation | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const hasLoadedAutoSave = useRef(false);
@@ -190,6 +191,27 @@ export function ChroniclerWorldAtlasPage() {
     setLocations((current) => current.map((location) => (location.id === nextLocation.id ? nextLocation : location)));
   }
 
+  async function deleteLocationBranch(location: WorldLocation) {
+    const branchIds = getLocationBranchIds(location.id, locations);
+    const supabase = createClient();
+    setMessage(`Deleting ${branchIds.length} area${branchIds.length === 1 ? "" : "s"}...`);
+
+    const { error } = await supabase.from("world_locations").delete().in("id", branchIds);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    const remainingLocations = locations.filter((candidate) => !branchIds.includes(candidate.id));
+    setLocations(remainingLocations);
+    setDeleteTarget(null);
+
+    const fallbackLocation = getDeleteFallbackLocation(location, remainingLocations);
+    selectLocation(fallbackLocation);
+    setMessage("Area deleted.");
+  }
+
   return (
     <div className="atlas-dashboard">
       {message ? <p className="form-message atlas-message">{message}</p> : null}
@@ -272,7 +294,13 @@ export function ChroniclerWorldAtlasPage() {
           </div>
 
           {selectedLocation ? (
-            <LocationEditor location={selectedLocation} locations={locations} onChange={updateSelectedLocation} />
+            <LocationEditor
+              location={selectedLocation}
+              locations={locations}
+              onChange={updateSelectedLocation}
+              onRequestDelete={() => setDeleteTarget(selectedLocation)}
+              deleteCount={getLocationBranchIds(selectedLocation.id, locations).length}
+            />
           ) : (
             <div className="empty-state">
               <strong>No area selected.</strong>
@@ -280,6 +308,27 @@ export function ChroniclerWorldAtlasPage() {
             </div>
           )}
         </section>
+      ) : null}
+
+      {deleteTarget ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-location-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">World Atlas</p>
+            <h3 id="delete-location-title">Delete this area?</h3>
+            <p className="subcopy">
+              This will delete {deleteTarget.name} and {getLocationBranchIds(deleteTarget.id, locations).length - 1} area
+              {getLocationBranchIds(deleteTarget.id, locations).length - 1 === 1 ? "" : "s"} inside it.
+            </p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button className="primary-inline-button" onClick={() => deleteLocationBranch(deleteTarget)}>
+                Delete Area
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
     </div>
   );
@@ -321,10 +370,14 @@ function LocationEditor({
   location,
   locations,
   onChange,
+  onRequestDelete,
+  deleteCount,
 }: {
   location: WorldLocation;
   locations: WorldLocation[];
   onChange: (location: WorldLocation) => void;
+  onRequestDelete: () => void;
+  deleteCount: number;
 }) {
   return (
     <div className="atlas-editor-simple">
@@ -374,6 +427,17 @@ function LocationEditor({
           <textarea value={location.public_description} onChange={(event) => onChange({ ...location, public_description: event.target.value })} />
         </label>
       </div>
+      <div className="atlas-danger-zone">
+        <div>
+          <strong>Delete Area</strong>
+          <span>
+            Removes this area and {deleteCount - 1} nested area{deleteCount - 1 === 1 ? "" : "s"} below it.
+          </span>
+        </div>
+        <button className="secondary-button" onClick={onRequestDelete}>
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
@@ -388,4 +452,29 @@ function getLocationPath(location: WorldLocation, locations: WorldLocation[]) {
   }
 
   return path;
+}
+
+function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {
+  const branchIds = new Set([locationId]);
+  let addedChild = true;
+
+  while (addedChild) {
+    addedChild = false;
+    for (const location of locations) {
+      if (location.parent_location_id && branchIds.has(location.parent_location_id) && !branchIds.has(location.id)) {
+        branchIds.add(location.id);
+        addedChild = true;
+      }
+    }
+  }
+
+  return Array.from(branchIds);
+}
+
+function getDeleteFallbackLocation(deletedLocation: WorldLocation, remainingLocations: WorldLocation[]) {
+  if (deletedLocation.parent_location_id) {
+    return remainingLocations.find((location) => location.id === deletedLocation.parent_location_id) || null;
+  }
+
+  return remainingLocations.find((location) => location.location_type === "Continent" && !location.parent_location_id) || null;
 }
