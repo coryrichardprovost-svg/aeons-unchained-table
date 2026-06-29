@@ -890,21 +890,48 @@ h1 {
   gap: 14px;
 }
 
-.atlas-info-grid {
+.atlas-area-summary {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: 14px;
 }
 
-.atlas-info-grid > div {
+.atlas-summary-block {
   display: grid;
-  gap: 4px;
+  gap: 12px;
   align-content: start;
-  min-height: 150px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(244, 239, 226, 0.045);
+}
+
+.atlas-child-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.atlas-child-card {
+  min-height: 82px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 16, 14, 0.3);
+  color: var(--ink);
+  text-align: left;
+}
+
+.atlas-child-card:hover {
+  border-color: rgba(66, 180, 168, 0.55);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.atlas-child-card span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .atlas-editor-simple,
@@ -2523,7 +2550,7 @@ ul {
   .class-builder-layout,
   .player-class-layout,
   .atlas-hero-panel,
-  .atlas-info-grid {
+  .atlas-child-grid {
     grid-template-columns: 1fr;
   }
 

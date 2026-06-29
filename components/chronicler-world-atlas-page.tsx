@@ -279,16 +279,7 @@ export function ChroniclerWorldAtlasPage() {
           <span className="tag gold">{selectedLocation?.location_type || "No area selected"}</span>
         </div>
         {selectedLocation ? (
-          <div className="atlas-info-grid">
-            <div>
-              <strong>Area Info</strong>
-              <p className="subcopy">{selectedLocation.chronicler_notes || "No area information has been written yet."}</p>
-            </div>
-            <div>
-              <strong>Description</strong>
-              <p className="subcopy">{selectedLocation.public_description || "No description has been written yet."}</p>
-            </div>
-          </div>
+          <AtlasAreaSummary location={selectedLocation} locations={locations} onSelect={selectLocation} />
         ) : (
           <p className="subcopy">Choose a continent, region, place, or specific location to view its information.</p>
         )}
@@ -353,6 +344,64 @@ export function ChroniclerWorldAtlasPage() {
           </section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function AtlasAreaSummary({
+  location,
+  locations,
+  onSelect,
+}: {
+  location: WorldLocation;
+  locations: WorldLocation[];
+  onSelect: (location: WorldLocation) => void;
+}) {
+  const childLocations = getChildLocations(location.id, locations);
+  const specialLocationCount = getSpecialLocationCount(location.id, locations);
+
+  return (
+    <div className="atlas-area-summary">
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>Areas Within {location.name}</h3>
+          <span className="tag teal">{childLocations.length}</span>
+        </div>
+        <div className="atlas-child-grid">
+          {childLocations.map((childLocation) => (
+            <button className="atlas-child-card" key={childLocation.id} onClick={() => onSelect(childLocation)}>
+              <strong>{childLocation.name}</strong>
+              <span>{childLocation.location_type}</span>
+            </button>
+          ))}
+          {childLocations.length === 0 ? (
+            <div className="empty-state">
+              <strong>No nested areas yet.</strong>
+              <span>Open the backend to add areas inside this location.</span>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>Special Locations</h3>
+          <span className="tag gold">{specialLocationCount}</span>
+        </div>
+        <p className="subcopy">
+          {specialLocationCount
+            ? `${location.name} has ${specialLocationCount} special location${specialLocationCount === 1 ? "" : "s"} nested inside it.`
+            : "No special locations have been added under this area yet."}
+        </p>
+      </section>
+
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>Description</h3>
+          <span className="tag">{location.location_type}</span>
+        </div>
+        <p className="subcopy">{location.public_description || "No description has been written yet."}</p>
+      </section>
     </div>
   );
 }
@@ -506,6 +555,19 @@ function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {
   }
 
   return Array.from(branchIds);
+}
+
+function getChildLocations(locationId: string, locations: WorldLocation[]) {
+  return locations.filter((location) => location.parent_location_id === locationId);
+}
+
+function getSpecialLocationCount(locationId: string, locations: WorldLocation[]) {
+  const branchIds = getLocationBranchIds(locationId, locations);
+  return locations.filter((location) => location.id !== locationId && branchIds.includes(location.id) && isSpecialLocation(location)).length;
+}
+
+function isSpecialLocation(location: WorldLocation) {
+  return ["Point of Interest", "Dungeon", "Landmark", "Building"].includes(location.location_type);
 }
 
 function getDeleteFallbackLocation(deletedLocation: WorldLocation, remainingLocations: WorldLocation[]) {
