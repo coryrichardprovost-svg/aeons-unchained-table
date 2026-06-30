@@ -158,6 +158,7 @@ create table public.bestiary_creatures (
   image_url text not null default '',
   description text not null default '',
   origin_location_id uuid references public.world_locations(id) on delete set null,
+  origin_location_ids jsonb not null default '[]'::jsonb,
   strengths text not null default '',
   weaknesses text not null default '',
   status jsonb not null default '{

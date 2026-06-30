@@ -24,6 +24,7 @@ type CreatureRecord = {
   image_url: string;
   description: string;
   origin_location_id: string | null;
+  origin_location_ids: string[];
   strengths: string;
   weaknesses: string;
   status: CreatureStatus;
@@ -92,7 +93,8 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
           creature_type: creature.creature_type,
           image_url: creature.image_url,
           description: creature.description,
-          origin_location_id: creature.origin_location_id || null,
+          origin_location_id: creature.origin_location_ids[0] || creature.origin_location_id || null,
+          origin_location_ids: creature.origin_location_ids,
           strengths: creature.strengths,
           weaknesses: creature.weaknesses,
           status: creature.status,
@@ -112,6 +114,31 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
 
   function updateCreature(patch: Partial<CreatureRecord>) {
     setCreature((current) => (current ? { ...current, ...patch } : current));
+  }
+
+  function addOriginLocation(locationId: string) {
+    if (!locationId) return;
+    setCreature((current) =>
+      current
+        ? {
+            ...current,
+            origin_location_id: current.origin_location_id || locationId,
+            origin_location_ids: Array.from(new Set([...current.origin_location_ids, locationId])),
+          }
+        : current,
+    );
+  }
+
+  function removeOriginLocation(locationId: string) {
+    setCreature((current) => {
+      if (!current) return current;
+      const nextOriginIds = current.origin_location_ids.filter((originId) => originId !== locationId);
+      return {
+        ...current,
+        origin_location_id: nextOriginIds[0] || null,
+        origin_location_ids: nextOriginIds,
+      };
+    });
   }
 
   function updateStatus(statusKey: CreatureStatusKey, value: string) {
@@ -180,8 +207,8 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
           </label>
           <label className="field">
             <span>Where It Is From</span>
-            <select value={creature.origin_location_id || ""} onChange={(event) => updateCreature({ origin_location_id: event.target.value || null })}>
-              <option value="">No origin</option>
+            <select value="" onChange={(event) => addOriginLocation(event.target.value)}>
+              <option value="">Add origin area</option>
               {locations.map((location) => (
                 <option value={location.id} key={location.id}>
                   {location.name} ({location.location_type})
@@ -189,6 +216,15 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
               ))}
             </select>
           </label>
+          <div className="bestiary-origin-chip-list">
+            {creature.origin_location_ids.map((locationId) => (
+              <button className="atlas-npc-chip" key={locationId} onClick={() => removeOriginLocation(locationId)}>
+                <strong>{getLocationLabel(locationId, locations)}</strong>
+                <span>Remove</span>
+              </button>
+            ))}
+            {creature.origin_location_ids.length === 0 ? <p className="subcopy">No origin areas have been added yet.</p> : null}
+          </div>
         </div>
 
         <div className="bestiary-book-page">
@@ -291,6 +327,7 @@ function normalizeCreature(creature: Partial<CreatureRecord> & { id: string }): 
     image_url: creature.image_url || "",
     description: creature.description || "",
     origin_location_id: creature.origin_location_id || null,
+    origin_location_ids: normalizeOriginLocationIds(creature.origin_location_ids, creature.origin_location_id),
     strengths: creature.strengths || "",
     weaknesses: creature.weaknesses || "",
     status: normalizeStatus(creature.status),
@@ -300,6 +337,17 @@ function normalizeCreature(creature: Partial<CreatureRecord> & { id: string }): 
     },
     visibility: creature.visibility || "chronicler",
   };
+}
+
+function normalizeOriginLocationIds(originLocationIds: unknown, originLocationId?: string | null) {
+  const ids = Array.isArray(originLocationIds) ? originLocationIds.filter((value): value is string => typeof value === "string") : [];
+  if (originLocationId && !ids.includes(originLocationId)) ids.unshift(originLocationId);
+  return Array.from(new Set(ids));
+}
+
+function getLocationLabel(locationId: string, locations: WorldLocation[]) {
+  const location = locations.find((candidate) => candidate.id === locationId);
+  return location ? `${location.name} (${location.location_type})` : "Unknown area";
 }
 
 function createBlankStatus(): CreatureStatus {

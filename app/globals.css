@@ -1663,6 +1663,11 @@ h1 {
   border-radius: 6px;
 }
 
+.bestiary-origin-chip-list {
+  display: grid;
+  gap: 8px;
+}
+
 .bestiary-title-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.6fr) minmax(190px, 0.55fr);

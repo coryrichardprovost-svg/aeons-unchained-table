@@ -28,6 +28,7 @@ type CreatureRecord = {
   image_url: string;
   description: string;
   origin_location_id: string | null;
+  origin_location_ids?: string[];
   strengths: string;
   weaknesses: string;
   status: Partial<Record<"health" | "stamina" | "mind" | "divinity", string | { current?: string; max?: string }>>;
@@ -141,7 +142,8 @@ export function ChroniclerKnowledgePage() {
     const cleanSearch = searchTerm.trim().toLowerCase();
     return creatures.filter((creature) => {
       const matchesSearch = !cleanSearch || creature.name.toLowerCase().includes(cleanSearch) || creature.creature_type.toLowerCase().includes(cleanSearch);
-      const matchesLocation = selectedLocationIds.size === 0 || (creature.origin_location_id ? selectedLocationIds.has(creature.origin_location_id) : false);
+      const creatureLocationIds = getCreatureLocationIds(creature);
+      const matchesLocation = selectedLocationIds.size === 0 || creatureLocationIds.some((locationId) => selectedLocationIds.has(locationId));
       return matchesSearch && matchesLocation;
     });
   }, [creatures, searchTerm, selectedLocationIds]);
@@ -172,6 +174,7 @@ export function ChroniclerKnowledgePage() {
         owner_user_id: user?.id,
         name: "New Creature",
         origin_location_id: selectedLocationId || null,
+        origin_location_ids: selectedLocationId ? [selectedLocationId] : [],
       })
       .select("id")
       .single();
@@ -489,7 +492,7 @@ export function ChroniclerKnowledgePage() {
                     <CreatureCardStats creature={creature} />
                     <p>{creature.description || "No creature description yet."}</p>
                     <div className="market-card-meta">
-                      <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
+                      <span className="tag teal">{getCreatureLocationLabel(creature, locations)}</span>
                       <span className="tag">{creature.visibility}</span>
                     </div>
                   </div>
@@ -720,6 +723,21 @@ function CreatureCardStats({ creature }: { creature: CreatureRecord }) {
 function getLocationLabel(locationId: string | null, locations: WorldLocation[]) {
   const location = locations.find((candidate) => candidate.id === locationId);
   return location ? `${location.name} (${location.location_type})` : "No area set";
+}
+
+function getCreatureLocationIds(creature: CreatureRecord) {
+  const ids = Array.isArray(creature.origin_location_ids) ? creature.origin_location_ids : [];
+  if (creature.origin_location_id && !ids.includes(creature.origin_location_id)) return [creature.origin_location_id, ...ids];
+  return ids;
+}
+
+function getCreatureLocationLabel(creature: CreatureRecord, locations: WorldLocation[]) {
+  const originIds = getCreatureLocationIds(creature);
+  if (originIds.length === 0) return "No area set";
+
+  const firstLocation = locations.find((candidate) => candidate.id === originIds[0]);
+  const firstLabel = firstLocation ? `${firstLocation.name} (${firstLocation.location_type})` : "Unknown area";
+  return originIds.length === 1 ? firstLabel : `${firstLabel} +${originIds.length - 1}`;
 }
 
 function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {
