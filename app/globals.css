@@ -1403,6 +1403,40 @@ h1 {
   background: rgba(17, 16, 14, 0.28);
 }
 
+.market-shop-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.market-shop-summary-card {
+  display: grid;
+  align-content: space-between;
+  gap: 14px;
+  min-height: 210px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(17, 16, 14, 0.28);
+}
+
+.market-shop-summary-card:hover {
+  border-color: rgba(66, 180, 168, 0.55);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.market-shop-summary-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 20px;
+}
+
+.market-shop-summary-card span:not(.tag),
+.market-shop-summary-card p {
+  color: var(--muted);
+  margin: 0;
+}
+
 .market-shop-type-picker {
   display: grid;
   gap: 8px;
@@ -3419,7 +3453,8 @@ ul {
   .market-detail-heading,
   .market-detail-grid,
   .market-shop-grid,
-  .market-shop-notes {
+  .market-shop-notes,
+  .market-shop-card-grid {
     grid-template-columns: 1fr;
   }
 
