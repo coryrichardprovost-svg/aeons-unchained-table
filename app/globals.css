@@ -1560,7 +1560,7 @@ h1 {
 
 .bestiary-card-summary-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(118px, 0.52fr);
+  grid-template-columns: minmax(0, 1fr) minmax(164px, 0.68fr);
   gap: 10px;
   align-items: start;
 }
@@ -1581,12 +1581,12 @@ h1 {
 
 .bestiary-card-status-stack {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
 }
 
 .bestiary-card-status-stack span {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
   gap: 8px;
   min-width: 0;
   padding: 4px 6px;
@@ -1596,6 +1596,7 @@ h1 {
   color: var(--ink);
   font-size: 11px;
   line-height: 1.2;
+  text-align: center;
 }
 
 .bestiary-card-status-stack strong {
