@@ -36,12 +36,10 @@ for each row execute function public.set_updated_at();
 
 alter table public.bestiary_creatures enable row level security;
 
-grant select on public.bestiary_creatures to authenticated;
-grant insert, update, delete on public.bestiary_creatures to authenticated;
+grant select, insert, update, delete on public.bestiary_creatures to authenticated;
 
 drop policy if exists "authenticated users can read bestiary creatures" on public.bestiary_creatures;
 drop policy if exists "authenticated users can manage bestiary creatures" on public.bestiary_creatures;
-
 drop policy if exists "chroniclers can create bestiary creatures" on public.bestiary_creatures;
 drop policy if exists "chroniclers can update bestiary creatures" on public.bestiary_creatures;
 drop policy if exists "chroniclers can delete bestiary creatures" on public.bestiary_creatures;
