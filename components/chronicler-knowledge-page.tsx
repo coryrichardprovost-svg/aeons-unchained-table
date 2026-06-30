@@ -133,6 +133,7 @@ export function ChroniclerKnowledgePage() {
   const activeCategory = useMemo(() => categories.find((category) => category.id === activeCategoryId) || categories[0] || null, [activeCategoryId, categories]);
   const activeCategoryName = activeCategory?.name || "Knowledge";
   const isBestiaryCategory = activeCategory?.category_kind === "bestiary";
+  const isFaunaCategory = activeCategoryName.toLowerCase() === "fauna";
   const continents = useMemo(() => locations.filter((location) => location.location_type === "Continent" && !location.parent_location_id), [locations]);
   const regions = useMemo(() => locations.filter((location) => location.parent_location_id === continentId), [locations, continentId]);
   const areas = useMemo(() => locations.filter((location) => location.parent_location_id === regionId), [locations, regionId]);
@@ -215,6 +216,34 @@ export function ChroniclerKnowledgePage() {
 
     setEntries((current) => [data as KnowledgeEntry, ...current]);
     setMessage(`${activeCategory.name} entry created.`);
+  }
+
+  async function createFaunaEntry() {
+    if (!activeCategory) return;
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("knowledge_entries")
+      .insert({
+        owner_user_id: user?.id,
+        category_id: activeCategory.id,
+        category: activeCategory.name,
+        name: "New Fauna",
+        entry_type: "Wildlife",
+        location_id: selectedLocationId || null,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    router.push(`/dm/knowledge/fauna/${(data as { id: string }).id}`);
   }
 
   async function createCategory() {
@@ -533,17 +562,21 @@ export function ChroniclerKnowledgePage() {
           <div className="knowledge-section-header">
             <div>
               <h3>{activeCategoryName}</h3>
-              <p className="subcopy">Area-linked lore entries for this knowledge category.</p>
+              <p className="subcopy">{isFaunaCategory ? "Wildlife, mundane animals, mounts, predators, and regional animal knowledge." : "Area-linked lore entries for this knowledge category."}</p>
             </div>
-            <button className="primary-inline-button compact-action" onClick={createKnowledgeEntry}>
+            <button className="primary-inline-button compact-action" onClick={isFaunaCategory ? createFaunaEntry : createKnowledgeEntry}>
               New {activeCategoryName}
             </button>
           </div>
 
-          <div className="knowledge-entry-grid">
-            {filteredEntries.map((entry) => (
-              <KnowledgeEntryCard entry={entry} locations={locations} categoryName={activeCategoryName} onChange={updateEntry} onDelete={() => deleteEntry(entry.id)} key={entry.id} />
-            ))}
+          <div className={isFaunaCategory ? "fauna-card-grid" : "knowledge-entry-grid"}>
+            {filteredEntries.map((entry) =>
+              isFaunaCategory ? (
+                <FaunaCard entry={entry} locations={locations} key={entry.id} />
+              ) : (
+                <KnowledgeEntryCard entry={entry} locations={locations} categoryName={activeCategoryName} onChange={updateEntry} onDelete={() => deleteEntry(entry.id)} key={entry.id} />
+              ),
+            )}
 
             {!isLoading && filteredEntries.length === 0 ? (
               <div className="empty-state">
@@ -573,6 +606,35 @@ export function ChroniclerKnowledgePage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FaunaCard({ entry, locations }: { entry: KnowledgeEntry; locations: WorldLocation[] }) {
+  return (
+    <article className="fauna-card">
+      <Link className="fauna-card-link" href={`/dm/knowledge/fauna/${entry.id}`}>
+        <div className="fauna-card-image" style={entry.image_url ? { backgroundImage: `url(${entry.image_url})` } : undefined}>
+          {!entry.image_url ? entry.name.slice(0, 1).toUpperCase() : null}
+        </div>
+        <div className="fauna-card-body">
+          <div className="fauna-card-heading">
+            <div>
+              <strong>{entry.name}</strong>
+              <span>{entry.entry_type || "Wildlife"}</span>
+            </div>
+            <div className="fauna-card-tags">
+              <span>{entry.rarity || "No rarity"}</span>
+              <span>{entry.environment || "No environment"}</span>
+            </div>
+          </div>
+          <p>{entry.summary || entry.details || "No fauna description yet."}</p>
+          <div className="market-card-meta">
+            <span className="tag teal">{getLocationLabel(entry.location_id, locations)}</span>
+            <span className="tag">{entry.visibility}</span>
+          </div>
+        </div>
+      </Link>
+    </article>
   );
 }
 

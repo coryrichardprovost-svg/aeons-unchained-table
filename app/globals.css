@@ -1502,7 +1502,14 @@ h1 {
   gap: 14px;
 }
 
-.bestiary-card {
+.fauna-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.bestiary-card,
+.fauna-card {
   min-height: 260px;
   display: grid;
   grid-template-rows: 1fr auto;
@@ -1512,18 +1519,21 @@ h1 {
   background: rgba(244, 239, 226, 0.045);
 }
 
-.bestiary-card:hover {
+.bestiary-card:hover,
+.fauna-card:hover {
   border-color: rgba(66, 180, 168, 0.55);
   background: rgba(66, 180, 168, 0.08);
 }
 
-.bestiary-card-link {
+.bestiary-card-link,
+.fauna-card-link {
   display: grid;
   grid-template-rows: 138px 1fr;
   min-height: 242px;
 }
 
 .bestiary-card-image,
+.fauna-card-image,
 .bestiary-creature-image {
   display: grid;
   place-items: center;
@@ -1535,7 +1545,8 @@ h1 {
   font-size: 48px;
 }
 
-.bestiary-card-image {
+.bestiary-card-image,
+.fauna-card-image {
   border-bottom: 1px solid var(--line);
 }
 
@@ -1643,6 +1654,73 @@ h1 {
   color: var(--gold);
   font-size: 10px;
   line-height: 1;
+}
+
+.fauna-card-body {
+  display: grid;
+  grid-template-rows: auto minmax(64px, auto) auto;
+  gap: 12px;
+  padding: 14px;
+}
+
+.fauna-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(112px, 0.5fr);
+  gap: 10px;
+}
+
+.fauna-card-heading strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 20px;
+}
+
+.fauna-card-heading span,
+.fauna-card-body p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.fauna-card-tags {
+  display: grid;
+  gap: 5px;
+}
+
+.fauna-card-tags span {
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid rgba(244, 239, 226, 0.11);
+  border-radius: 5px;
+  background: rgba(17, 16, 14, 0.28);
+  color: var(--ink);
+  font-size: 11px;
+  text-align: center;
+}
+
+.fauna-card-body p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.fauna-detail-book {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.fauna-detail-title-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.55fr);
+  gap: 12px;
+}
+
+.fauna-detail-small-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .bestiary-book {
@@ -3862,8 +3940,12 @@ ul {
   .market-shop-notes,
   .market-shop-card-grid,
   .bestiary-card-grid,
+  .fauna-card-grid,
   .bestiary-book,
+  .fauna-detail-book,
   .bestiary-title-grid,
+  .fauna-detail-title-grid,
+  .fauna-detail-small-grid,
   .bestiary-stat-grid,
   .knowledge-filter-card,
   .knowledge-add-category,
