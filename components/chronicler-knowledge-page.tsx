@@ -56,6 +56,8 @@ type PendingDelete =
   | { kind: "category"; category: KnowledgeCategory }
   | null;
 
+const coreKnowledgeSortOrderLimit = 110;
+
 export function ChroniclerKnowledgePage() {
   const router = useRouter();
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
@@ -248,6 +250,13 @@ export function ChroniclerKnowledgePage() {
   }
 
   async function renameCategory(category: KnowledgeCategory) {
+    if (isCoreKnowledgeCategory(category)) {
+      setMessage(`${category.name} is a core Knowledge tab and cannot be renamed.`);
+      setEditingCategoryId("");
+      setEditingCategoryName("");
+      return;
+    }
+
     const cleanName = editingCategoryName.trim();
     if (!cleanName || cleanName === category.name) {
       setEditingCategoryId("");
@@ -271,6 +280,11 @@ export function ChroniclerKnowledgePage() {
   }
 
   async function deleteCategory(category: KnowledgeCategory) {
+    if (isCoreKnowledgeCategory(category)) {
+      setMessage(`${category.name} is a core Knowledge tab and cannot be deleted.`);
+      return;
+    }
+
     const supabase = createClient();
     if (category.category_kind === "generic") {
       const { error: linkedEntryError } = await supabase.from("knowledge_entries").delete().eq("category_id", category.id);
@@ -390,12 +404,18 @@ export function ChroniclerKnowledgePage() {
                 </button>
               )}
 
-              <button className="knowledge-tab-icon" title="Rename category" onClick={() => (editingCategoryId === category.id ? void renameCategory(category) : beginRenameCategory(category))}>
-                {editingCategoryId === category.id ? "Save" : "Edit"}
-              </button>
-              <button className="knowledge-tab-icon danger" title="Delete category" onClick={() => setPendingDelete({ kind: "category", category })}>
-                Delete
-              </button>
+              {isCoreKnowledgeCategory(category) ? (
+                <span className="knowledge-tab-lock">Core</span>
+              ) : (
+                <>
+                  <button className="knowledge-tab-icon" title="Rename category" onClick={() => (editingCategoryId === category.id ? void renameCategory(category) : beginRenameCategory(category))}>
+                    {editingCategoryId === category.id ? "Save" : "Edit"}
+                  </button>
+                  <button className="knowledge-tab-icon danger" title="Delete category" onClick={() => setPendingDelete({ kind: "category", category })}>
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -785,6 +805,10 @@ function getDeleteDialogCopy(pendingDelete: NonNullable<PendingDelete>) {
   }
 
   return "This will permanently remove this Knowledge tab and delete the entries stored inside it.";
+}
+
+function isCoreKnowledgeCategory(category: KnowledgeCategory) {
+  return category.category_kind === "bestiary" || category.sort_order <= coreKnowledgeSortOrderLimit;
 }
 
 function formatStatusValue(value: string | { current?: string; max?: string } | undefined) {
