@@ -147,6 +147,7 @@ export function ChroniclerKnowledgePage() {
   const isFaunaCategory = activeCategoryName.toLowerCase() === "fauna";
   const isFloraCategory = activeCategoryName.toLowerCase() === "flora";
   const isEnemyCategory = activeCategoryName.toLowerCase() === "enemies";
+  const isFactionCategory = activeCategoryName.toLowerCase() === "factions";
   const isNatureCategory = isFaunaCategory || isFloraCategory;
   const continents = useMemo(() => locations.filter((location) => location.location_type === "Continent" && !location.parent_location_id), [locations]);
   const regions = useMemo(() => locations.filter((location) => location.parent_location_id === continentId), [locations, continentId]);
@@ -263,6 +264,37 @@ export function ChroniclerKnowledgePage() {
     }
 
     router.push(`/dm/knowledge/enemies/${(data as { id: string }).id}`);
+  }
+
+  async function createFactionEntry() {
+    if (!activeCategory) return;
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("knowledge_entries")
+      .insert({
+        owner_user_id: user?.id,
+        category_id: activeCategory.id,
+        category: activeCategory.name,
+        name: "New Faction",
+        entry_type: "Organization",
+        location_id: selectedLocationId || null,
+        location_ids: selectedLocationId ? [selectedLocationId] : [],
+        environment: "Local",
+        rarity: "Unknown",
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    router.push(`/dm/knowledge/factions/${(data as { id: string }).id}`);
   }
 
   async function createNatureEntry() {
@@ -617,14 +649,16 @@ export function ChroniclerKnowledgePage() {
               <h3>{activeCategoryName}</h3>
               <p className="subcopy">{getKnowledgeCategoryCopy(activeCategoryName)}</p>
             </div>
-            <button className="primary-inline-button compact-action" onClick={isEnemyCategory ? createEnemyEntry : isNatureCategory ? createNatureEntry : createKnowledgeEntry}>
+            <button className="primary-inline-button compact-action" onClick={isFactionCategory ? createFactionEntry : isEnemyCategory ? createEnemyEntry : isNatureCategory ? createNatureEntry : createKnowledgeEntry}>
               New {activeCategoryName}
             </button>
           </div>
 
-          <div className={isEnemyCategory ? "bestiary-card-grid" : isNatureCategory ? "fauna-card-grid" : "knowledge-entry-grid"}>
+          <div className={isFactionCategory ? "faction-card-grid" : isEnemyCategory ? "bestiary-card-grid" : isNatureCategory ? "fauna-card-grid" : "knowledge-entry-grid"}>
             {filteredEntries.map((entry) =>
-              isEnemyCategory ? (
+              isFactionCategory ? (
+                <FactionCard entry={entry} locations={locations} key={entry.id} />
+              ) : isEnemyCategory ? (
                 <EnemyCard entry={entry} locations={locations} key={entry.id} />
               ) : isNatureCategory ? (
                 <NatureCard entry={entry} locations={locations} categoryName={activeCategoryName} key={entry.id} />
@@ -661,6 +695,35 @@ export function ChroniclerKnowledgePage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FactionCard({ entry, locations }: { entry: KnowledgeEntry; locations: WorldLocation[] }) {
+  return (
+    <article className="faction-card">
+      <Link className="faction-card-link" href={`/dm/knowledge/factions/${entry.id}`}>
+        <div className="faction-card-banner" style={entry.image_url ? { backgroundImage: `url(${entry.image_url})` } : undefined}>
+          {!entry.image_url ? entry.name.slice(0, 1).toUpperCase() : null}
+        </div>
+        <div className="faction-card-body">
+          <div className="faction-card-heading">
+            <div>
+              <strong>{entry.name}</strong>
+              <span>{entry.entry_type || "Faction"}</span>
+            </div>
+            <div className="faction-card-tags">
+              <span>{entry.environment || "No influence set"}</span>
+              <span>{entry.rarity || "Unknown"}</span>
+            </div>
+          </div>
+          <p>{entry.summary || entry.details || "No faction dossier yet."}</p>
+          <div className="market-card-meta">
+            <span className="tag teal">{getKnowledgeEntryLocationLabel(entry, locations)}</span>
+            <span className="tag">{entry.visibility}</span>
+          </div>
+        </div>
+      </Link>
+    </article>
   );
 }
 
@@ -967,6 +1030,7 @@ function getKnowledgeCategoryCopy(categoryName: string) {
   if (categoryName === "Fauna") return "Wildlife, mundane animals, mounts, predators, and regional animal knowledge.";
   if (categoryName === "Flora") return "Plants, herbs, crops, poisons, reagents, and regional botanical knowledge.";
   if (categoryName === "Enemies") return "Enemy records with combat status, attributes, origin areas, strengths, weaknesses, and field notes.";
+  if (categoryName === "Factions") return "Political powers, guilds, cults, houses, churches, syndicates, and hidden organizations.";
   return "Area-linked lore entries for this knowledge category.";
 }
 
