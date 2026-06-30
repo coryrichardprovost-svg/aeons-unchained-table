@@ -22,6 +22,7 @@ type FaunaEntry = {
   summary: string;
   details: string;
   location_id: string | null;
+  location_ids: string[];
   environment: string;
   rarity: string;
   visibility: "chronicler" | "hinted" | "discovered" | "players";
@@ -86,7 +87,8 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
           image_url: entry.image_url,
           summary: entry.summary,
           details: entry.details,
-          location_id: entry.location_id || null,
+          location_id: entry.location_ids[0] || entry.location_id || null,
+          location_ids: entry.location_ids,
           environment: entry.environment,
           rarity: entry.rarity,
           visibility: entry.visibility,
@@ -104,6 +106,31 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
 
   function updateEntry(patch: Partial<FaunaEntry>) {
     setEntry((current) => (current ? { ...current, ...patch } : current));
+  }
+
+  function addLocation(locationId: string) {
+    if (!locationId) return;
+    setEntry((current) => {
+      if (!current) return current;
+      const nextLocationIds = Array.from(new Set([...current.location_ids, locationId]));
+      return {
+        ...current,
+        location_id: current.location_id || locationId,
+        location_ids: nextLocationIds,
+      };
+    });
+  }
+
+  function removeLocation(locationId: string) {
+    setEntry((current) => {
+      if (!current) return current;
+      const nextLocationIds = current.location_ids.filter((currentLocationId) => currentLocationId !== locationId);
+      return {
+        ...current,
+        location_id: nextLocationIds[0] || null,
+        location_ids: nextLocationIds,
+      };
+    });
   }
 
   async function deleteFauna() {
@@ -143,9 +170,9 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
             <input value={entry.image_url} onChange={(event) => updateEntry({ image_url: event.target.value })} />
           </label>
           <label className="field">
-            <span>Region or Area</span>
-            <select value={entry.location_id || ""} onChange={(event) => updateEntry({ location_id: event.target.value || null })}>
-              <option value="">No area</option>
+            <span>Regions or Areas</span>
+            <select value="" onChange={(event) => addLocation(event.target.value)}>
+              <option value="">Add area</option>
               {locations.map((location) => (
                 <option value={location.id} key={location.id}>
                   {location.name} ({location.location_type})
@@ -153,6 +180,14 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
               ))}
             </select>
           </label>
+          <div className="bestiary-origin-chip-list">
+            {entry.location_ids.map((locationId) => (
+              <button type="button" className="tag teal" onClick={() => removeLocation(locationId)} key={locationId}>
+                {getLocationLabel(locationId, locations)} x
+              </button>
+            ))}
+            {entry.location_ids.length === 0 ? <p className="subcopy">No fauna areas have been added yet.</p> : null}
+          </div>
         </div>
 
         <div className="bestiary-book-page">
@@ -232,8 +267,20 @@ function normalizeFaunaEntry(entry: Partial<FaunaEntry> & { id: string }): Fauna
     summary: entry.summary || "",
     details: entry.details || "",
     location_id: entry.location_id || null,
+    location_ids: normalizeLocationIds(entry.location_ids, entry.location_id),
     environment: entry.environment || "",
     rarity: entry.rarity || "",
     visibility: entry.visibility || "chronicler",
   };
+}
+
+function normalizeLocationIds(locationIds: unknown, locationId?: string | null) {
+  const ids = Array.isArray(locationIds) ? locationIds.filter((id): id is string => typeof id === "string" && Boolean(id)) : [];
+  if (locationId && !ids.includes(locationId)) return [locationId, ...ids];
+  return ids;
+}
+
+function getLocationLabel(locationId: string, locations: WorldLocation[]) {
+  const location = locations.find((candidate) => candidate.id === locationId);
+  return location ? `${location.name} (${location.location_type})` : "Unknown area";
 }

@@ -47,6 +47,7 @@ type KnowledgeEntry = {
   summary: string;
   details: string;
   location_id: string | null;
+  location_ids?: string[];
   environment: string;
   rarity: string;
   visibility: "chronicler" | "hinted" | "discovered" | "players";
@@ -160,7 +161,8 @@ export function ChroniclerKnowledgePage() {
         entry.name.toLowerCase().includes(cleanSearch) ||
         entry.entry_type.toLowerCase().includes(cleanSearch) ||
         entry.summary.toLowerCase().includes(cleanSearch);
-      const matchesLocation = selectedLocationIds.size === 0 || (entry.location_id ? selectedLocationIds.has(entry.location_id) : false);
+      const entryLocationIds = getKnowledgeEntryLocationIds(entry);
+      const matchesLocation = selectedLocationIds.size === 0 || entryLocationIds.some((locationId) => selectedLocationIds.has(locationId));
       return matchesCategory && matchesSearch && matchesLocation;
     });
   }, [activeCategory, entries, searchTerm, selectedLocationIds]);
@@ -205,6 +207,7 @@ export function ChroniclerKnowledgePage() {
         category: activeCategory.name,
         name: `New ${activeCategory.name} Entry`,
         location_id: selectedLocationId || null,
+        location_ids: selectedLocationId ? [selectedLocationId] : [],
       })
       .select("*")
       .single();
@@ -234,6 +237,7 @@ export function ChroniclerKnowledgePage() {
         name: "New Fauna",
         entry_type: "Wildlife",
         location_id: selectedLocationId || null,
+        location_ids: selectedLocationId ? [selectedLocationId] : [],
       })
       .select("id")
       .single();
@@ -629,7 +633,7 @@ function FaunaCard({ entry, locations }: { entry: KnowledgeEntry; locations: Wor
           </div>
           <p>{entry.summary || entry.details || "No fauna description yet."}</p>
           <div className="market-card-meta">
-            <span className="tag teal">{getLocationLabel(entry.location_id, locations)}</span>
+            <span className="tag teal">{getKnowledgeEntryLocationLabel(entry, locations)}</span>
             <span className="tag">{entry.visibility}</span>
           </div>
         </div>
@@ -669,6 +673,7 @@ function KnowledgeEntryCard({
           summary: localEntry.summary,
           details: localEntry.details,
           location_id: localEntry.location_id || null,
+          location_ids: getKnowledgeEntryLocationIds(localEntry),
           environment: localEntry.environment,
           rarity: localEntry.rarity,
           visibility: localEntry.visibility,
@@ -755,7 +760,7 @@ function KnowledgeEntryCard({
         </label>
 
         <div className="knowledge-entry-footer">
-          <span>{message || getLocationLabel(localEntry.location_id, locations)}</span>
+          <span>{message || getKnowledgeEntryLocationLabel(localEntry, locations)}</span>
           <button className="danger-inline-button compact-action" onClick={onDelete}>
             Delete
           </button>
@@ -820,6 +825,21 @@ function getCreatureLocationLabel(creature: CreatureRecord, locations: WorldLoca
   const firstLocation = locations.find((candidate) => candidate.id === originIds[0]);
   const firstLabel = firstLocation ? `${firstLocation.name} (${firstLocation.location_type})` : "Unknown area";
   return originIds.length === 1 ? firstLabel : `${firstLabel} +${originIds.length - 1}`;
+}
+
+function getKnowledgeEntryLocationIds(entry: KnowledgeEntry) {
+  const ids = Array.isArray(entry.location_ids) ? entry.location_ids : [];
+  if (entry.location_id && !ids.includes(entry.location_id)) return [entry.location_id, ...ids];
+  return ids;
+}
+
+function getKnowledgeEntryLocationLabel(entry: KnowledgeEntry, locations: WorldLocation[]) {
+  const locationIds = getKnowledgeEntryLocationIds(entry);
+  if (locationIds.length === 0) return "No area set";
+
+  const firstLocation = locations.find((candidate) => candidate.id === locationIds[0]);
+  const firstLabel = firstLocation ? `${firstLocation.name} (${firstLocation.location_type})` : "Unknown area";
+  return locationIds.length === 1 ? firstLabel : `${firstLabel} +${locationIds.length - 1}`;
 }
 
 function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {

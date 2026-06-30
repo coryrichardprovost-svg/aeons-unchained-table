@@ -8,6 +8,7 @@ create table if not exists public.knowledge_entries (
   summary text not null default '',
   details text not null default '',
   location_id uuid references public.world_locations(id) on delete set null,
+  location_ids jsonb not null default '[]'::jsonb,
   environment text not null default '',
   rarity text not null default '',
   visibility text not null default 'chronicler' check (visibility in ('chronicler', 'hinted', 'discovered', 'players')),

@@ -43,6 +43,15 @@ type AtlasCreature = {
   origin_location_ids?: string[];
 };
 
+type AtlasFauna = {
+  id: string;
+  name: string;
+  entry_type: string;
+  location_id: string | null;
+  location_ids?: string[];
+  category: string;
+};
+
 const locationTypes = ["Continent", "Region", "City", "Town", "Village", "District", "Landmark", "Wilderness", "Dungeon", "Building", "Point of Interest"];
 
 export function ChroniclerWorldAtlasPage() {
@@ -50,6 +59,7 @@ export function ChroniclerWorldAtlasPage() {
   const [npcs, setNpcs] = useState<AtlasNpc[]>([]);
   const [markets, setMarkets] = useState<AtlasMarket[]>([]);
   const [creatures, setCreatures] = useState<AtlasCreature[]>([]);
+  const [fauna, setFauna] = useState<AtlasFauna[]>([]);
   const [continentId, setContinentId] = useState("");
   const [regionId, setRegionId] = useState("");
   const [placeId, setPlaceId] = useState("");
@@ -98,11 +108,13 @@ export function ChroniclerWorldAtlasPage() {
       { data: npcData, error: npcError },
       { data: marketData, error: marketError },
       { data: creatureData, error: creatureError },
+      { data: faunaData, error: faunaError },
     ] = await Promise.all([
       supabase.from("world_locations").select("*").order("name", { ascending: true }),
       supabase.from("npcs").select("id,name,location_id,faction,organization").order("name", { ascending: true }),
       supabase.from("markets").select("id,name,location_id,market_type").order("name", { ascending: true }),
       supabase.from("bestiary_creatures").select("id,name,creature_type,origin_location_id,origin_location_ids").order("name", { ascending: true }),
+      supabase.from("knowledge_entries").select("id,name,entry_type,location_id,location_ids,category").eq("category", "Fauna").order("name", { ascending: true }),
     ]);
 
     if (locationError) {
@@ -127,10 +139,15 @@ export function ChroniclerWorldAtlasPage() {
       setMessage(creatureError.message.includes("origin_location_ids") ? "Run supabase/migrations/021_add_bestiary_multiple_locations.sql in Supabase SQL Editor." : creatureError.message);
     }
 
+    if (faunaError) {
+      setMessage(faunaError.message.includes("location_ids") ? "Run supabase/migrations/022_add_knowledge_entry_multiple_locations.sql in Supabase SQL Editor." : faunaError.message);
+    }
+
     setLocations((locationData || []) as WorldLocation[]);
     setNpcs((npcData || []) as AtlasNpc[]);
     setMarkets((marketData || []) as AtlasMarket[]);
     setCreatures((creatureData || []) as AtlasCreature[]);
+    setFauna((faunaData || []) as AtlasFauna[]);
     setIsLoading(false);
   }, []);
 
@@ -354,7 +371,7 @@ export function ChroniclerWorldAtlasPage() {
           <span className="tag gold">{selectedLocation?.location_type || "No area selected"}</span>
         </div>
         {selectedLocation ? (
-          <AtlasAreaSummary location={selectedLocation} locations={locations} npcs={npcs} markets={markets} creatures={creatures} onSelect={selectLocation} />
+          <AtlasAreaSummary location={selectedLocation} locations={locations} npcs={npcs} markets={markets} creatures={creatures} fauna={fauna} onSelect={selectLocation} />
         ) : (
           <p className="subcopy">Choose a continent, region, place, or specific location to view its information.</p>
         )}
@@ -441,6 +458,7 @@ function AtlasAreaSummary({
   npcs,
   markets,
   creatures,
+  fauna,
   onSelect,
 }: {
   location: WorldLocation;
@@ -448,6 +466,7 @@ function AtlasAreaSummary({
   npcs: AtlasNpc[];
   markets: AtlasMarket[];
   creatures: AtlasCreature[];
+  fauna: AtlasFauna[];
   onSelect: (location: WorldLocation) => void;
 }) {
   const childLocations = getChildLocations(location.id, locations);
@@ -457,6 +476,7 @@ function AtlasAreaSummary({
   const locationNpcs = npcs.filter((npc) => npc.location_id === location.id);
   const locationMarkets = markets.filter((market) => market.location_id === location.id);
   const locationCreatures = creatures.filter((creature) => getCreatureLocationIds(creature).some((locationId) => branchIds.includes(locationId)));
+  const locationFauna = fauna.filter((entry) => getKnowledgeEntryLocationIds(entry).some((locationId) => branchIds.includes(locationId)));
 
   return (
     <div className="atlas-area-summary">
@@ -550,6 +570,22 @@ function AtlasAreaSummary({
             </Link>
           ))}
           {locationCreatures.length === 0 ? <p className="subcopy">No creatures are connected to this area or its nested areas yet.</p> : null}
+        </div>
+      </section>
+
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>Fauna In This Area</h3>
+          <span className="tag teal">{locationFauna.length}</span>
+        </div>
+        <div className="atlas-npc-list">
+          {locationFauna.map((entry) => (
+            <Link href={`/dm/knowledge/fauna/${entry.id}`} className="atlas-npc-chip" key={entry.id}>
+              <strong>{entry.name}</strong>
+              <span>{entry.entry_type || "Fauna"}</span>
+            </Link>
+          ))}
+          {locationFauna.length === 0 ? <p className="subcopy">No fauna are connected to this area or its nested areas yet.</p> : null}
         </div>
       </section>
 
@@ -719,6 +755,12 @@ function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {
 function getCreatureLocationIds(creature: AtlasCreature) {
   const ids = Array.isArray(creature.origin_location_ids) ? creature.origin_location_ids : [];
   if (creature.origin_location_id && !ids.includes(creature.origin_location_id)) return [creature.origin_location_id, ...ids];
+  return ids;
+}
+
+function getKnowledgeEntryLocationIds(entry: AtlasFauna) {
+  const ids = Array.isArray(entry.location_ids) ? entry.location_ids : [];
+  if (entry.location_id && !ids.includes(entry.location_id)) return [entry.location_id, ...ids];
   return ids;
 }
 
