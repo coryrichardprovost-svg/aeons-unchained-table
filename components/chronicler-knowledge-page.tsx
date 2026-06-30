@@ -49,6 +49,11 @@ type KnowledgeEntry = {
   visibility: "chronicler" | "hinted" | "discovered" | "players";
 };
 
+type PendingDelete =
+  | { kind: "category"; category: KnowledgeCategory }
+  | { kind: "creature"; creature: CreatureRecord }
+  | null;
+
 export function ChroniclerKnowledgePage() {
   const router = useRouter();
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
@@ -60,6 +65,7 @@ export function ChroniclerKnowledgePage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState("");
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [continentId, setContinentId] = useState("");
   const [regionId, setRegionId] = useState("");
   const [areaId, setAreaId] = useState("");
@@ -261,13 +267,6 @@ export function ChroniclerKnowledgePage() {
   }
 
   async function deleteCategory(category: KnowledgeCategory) {
-    const confirmed = window.confirm(
-      category.category_kind === "bestiary"
-        ? `Remove the ${category.name} tab? Existing creatures will stay in the database, but this tab will disappear until another Bestiary category is added through SQL.`
-        : `Delete the ${category.name} tab and its entries?`,
-    );
-    if (!confirmed) return;
-
     const supabase = createClient();
     if (category.category_kind === "generic") {
       const { error: linkedEntryError } = await supabase.from("knowledge_entries").delete().eq("category_id", category.id);
@@ -295,6 +294,32 @@ export function ChroniclerKnowledgePage() {
     setEntries((current) => current.filter((entry) => entry.category_id !== category.id && entry.category !== category.name));
     setActiveCategoryId((current) => (current === category.id ? nextCategories[0]?.id || "" : current));
     setMessage(`${category.name} category removed.`);
+  }
+
+  async function deleteCreature(creature: CreatureRecord) {
+    const supabase = createClient();
+    const { error } = await supabase.from("bestiary_creatures").delete().eq("id", creature.id);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setCreatures((current) => current.filter((candidate) => candidate.id !== creature.id));
+    setMessage(`${creature.name} deleted.`);
+  }
+
+  async function confirmProtectedDelete() {
+    if (!pendingDelete) return;
+
+    if (pendingDelete.kind === "category") {
+      await deleteCategory(pendingDelete.category);
+    }
+
+    if (pendingDelete.kind === "creature") {
+      await deleteCreature(pendingDelete.creature);
+    }
+
+    setPendingDelete(null);
   }
 
   function beginRenameCategory(category: KnowledgeCategory) {
@@ -380,7 +405,7 @@ export function ChroniclerKnowledgePage() {
               <button className="knowledge-tab-icon" title="Rename category" onClick={() => (editingCategoryId === category.id ? void renameCategory(category) : beginRenameCategory(category))}>
                 {editingCategoryId === category.id ? "Save" : "Edit"}
               </button>
-              <button className="knowledge-tab-icon danger" title="Delete category" onClick={() => deleteCategory(category)}>
+              <button className="knowledge-tab-icon danger" title="Delete category" onClick={() => setPendingDelete({ kind: "category", category })}>
                 Delete
               </button>
             </div>
@@ -470,22 +495,29 @@ export function ChroniclerKnowledgePage() {
 
           <div className="bestiary-card-grid">
             {filteredCreatures.map((creature) => (
-              <Link className="bestiary-card" href={`/dm/knowledge/bestiary/${creature.id}`} key={creature.id}>
-                <div className="bestiary-card-image" style={creature.image_url ? { backgroundImage: `url(${creature.image_url})` } : undefined}>
-                  {!creature.image_url ? creature.name.slice(0, 1).toUpperCase() : null}
-                </div>
-                <div className="bestiary-card-body">
-                  <div>
-                    <strong>{creature.name}</strong>
-                    <span>{creature.creature_type || "Unknown creature type"}</span>
+              <article className="bestiary-card" key={creature.id}>
+                <Link className="bestiary-card-link" href={`/dm/knowledge/bestiary/${creature.id}`}>
+                  <div className="bestiary-card-image" style={creature.image_url ? { backgroundImage: `url(${creature.image_url})` } : undefined}>
+                    {!creature.image_url ? creature.name.slice(0, 1).toUpperCase() : null}
                   </div>
-                  <p>{creature.description || "No creature description yet."}</p>
-                  <div className="market-card-meta">
-                    <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
-                    <span className="tag">{creature.visibility}</span>
+                  <div className="bestiary-card-body">
+                    <div>
+                      <strong>{creature.name}</strong>
+                      <span>{creature.creature_type || "Unknown creature type"}</span>
+                    </div>
+                    <p>{creature.description || "No creature description yet."}</p>
+                    <div className="market-card-meta">
+                      <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
+                      <span className="tag">{creature.visibility}</span>
+                    </div>
                   </div>
+                </Link>
+                <div className="bestiary-card-actions">
+                  <button className="danger-inline-button compact-action" onClick={() => setPendingDelete({ kind: "creature", creature })}>
+                    Delete Creature
+                  </button>
                 </div>
-              </Link>
+              </article>
             ))}
 
             {!isLoading && filteredCreatures.length === 0 ? (
@@ -521,6 +553,24 @@ export function ChroniclerKnowledgePage() {
             ) : null}
           </div>
         </section>
+      ) : null}
+
+      {pendingDelete ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="knowledge-delete-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">Protected Delete</p>
+            <h3 id="knowledge-delete-title">{getDeleteDialogTitle(pendingDelete)}</h3>
+            <p className="subcopy">{getDeleteDialogCopy(pendingDelete)}</p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setPendingDelete(null)}>
+                Cancel
+              </button>
+              <button className="danger-inline-button" onClick={confirmProtectedDelete}>
+                Delete
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
     </div>
   );
@@ -691,4 +741,21 @@ function getTypePlaceholder(categoryName: string) {
     Secrets: "Rumor, hidden truth",
   };
   return placeholders[categoryName] || "Subtype, use, source";
+}
+
+function getDeleteDialogTitle(pendingDelete: NonNullable<PendingDelete>) {
+  if (pendingDelete.kind === "creature") return `Delete ${pendingDelete.creature.name}?`;
+  return `Delete ${pendingDelete.category.name} tab?`;
+}
+
+function getDeleteDialogCopy(pendingDelete: NonNullable<PendingDelete>) {
+  if (pendingDelete.kind === "creature") {
+    return "This will permanently remove this creature from the Bestiary. Its status, attributes, notes, and origin link will be deleted.";
+  }
+
+  if (pendingDelete.category.category_kind === "bestiary") {
+    return "This removes the Bestiary tab from Knowledge. Existing creature records will stay in the database, but the tab will disappear until another Bestiary category is restored.";
+  }
+
+  return "This will permanently remove this Knowledge tab and delete the entries stored inside it.";
 }

@@ -1492,7 +1492,7 @@ h1 {
 .bestiary-card {
   min-height: 260px;
   display: grid;
-  grid-template-rows: 138px 1fr;
+  grid-template-rows: 1fr auto;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1502,6 +1502,12 @@ h1 {
 .bestiary-card:hover {
   border-color: rgba(66, 180, 168, 0.55);
   background: rgba(66, 180, 168, 0.08);
+}
+
+.bestiary-card-link {
+  display: grid;
+  grid-template-rows: 138px 1fr;
+  min-height: 242px;
 }
 
 .bestiary-card-image,
@@ -1544,6 +1550,12 @@ h1 {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}
+
+.bestiary-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 14px 14px;
 }
 
 .bestiary-book {
