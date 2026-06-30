@@ -11,7 +11,9 @@ type WorldLocation = {
   location_type: string;
 };
 
-type FaunaEntry = {
+type NatureEntryKind = "Fauna" | "Flora";
+
+type NatureEntry = {
   id: string;
   owner_user_id: string | null;
   category_id: string | null;
@@ -29,8 +31,17 @@ type FaunaEntry = {
 };
 
 export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
+  return <ChroniclerNatureDetailPage entryId={faunaId} kind="Fauna" />;
+}
+
+export function ChroniclerFloraDetailPage({ floraId }: { floraId: string }) {
+  return <ChroniclerNatureDetailPage entryId={floraId} kind="Flora" />;
+}
+
+function ChroniclerNatureDetailPage({ entryId, kind }: { entryId: string; kind: NatureEntryKind }) {
   const router = useRouter();
-  const [entry, setEntry] = useState<FaunaEntry | null>(null);
+  const config = getNatureEntryConfig(kind);
+  const [entry, setEntry] = useState<NatureEntry | null>(null);
   const [locations, setLocations] = useState<WorldLocation[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +51,7 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
   const loadFauna = useCallback(async () => {
     const supabase = createClient();
     const [{ data: entryData, error: entryError }, { data: locationData, error: locationError }] = await Promise.all([
-      supabase.from("knowledge_entries").select("*").eq("id", faunaId).single(),
+      supabase.from("knowledge_entries").select("*").eq("id", entryId).single(),
       supabase.from("world_locations").select("id,name,location_type").order("name", { ascending: true }),
     ]);
 
@@ -56,13 +67,13 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
       return;
     }
 
-    setEntry(normalizeFaunaEntry(entryData as Partial<FaunaEntry> & { id: string }));
+    setEntry(normalizeNatureEntry(entryData as Partial<NatureEntry> & { id: string }, kind));
     setLocations((locationData || []) as WorldLocation[]);
     setIsLoading(false);
-  }, [faunaId]);
+  }, [entryId, kind]);
 
   useEffect(() => {
-    // Fauna records load after the browser Supabase session is available.
+    // Nature records load after the browser Supabase session is available.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadFauna();
   }, [loadFauna]);
@@ -77,12 +88,12 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
 
     const saveTimer = window.setTimeout(async () => {
       const supabase = createClient();
-      setMessage("Saving fauna...");
+      setMessage(`Saving ${config.lowerName}...`);
 
       const { error } = await supabase
         .from("knowledge_entries")
         .update({
-          name: entry.name.trim() || "Unnamed Fauna",
+          name: entry.name.trim() || `Unnamed ${kind}`,
           entry_type: entry.entry_type,
           image_url: entry.image_url,
           summary: entry.summary,
@@ -95,16 +106,16 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
         })
         .eq("id", entry.id);
 
-      setMessage(error ? error.message : "Fauna saved.");
+      setMessage(error ? error.message : `${kind} saved.`);
     }, 700);
 
     return () => window.clearTimeout(saveTimer);
-  }, [entry]);
+  }, [config.lowerName, entry, kind]);
 
-  if (isLoading) return <p className="form-message">Loading fauna...</p>;
-  if (!entry) return <p className="form-message">{message || "Fauna entry not found."}</p>;
+  if (isLoading) return <p className="form-message">Loading {config.lowerName}...</p>;
+  if (!entry) return <p className="form-message">{message || `${kind} entry not found.`}</p>;
 
-  function updateEntry(patch: Partial<FaunaEntry>) {
+  function updateEntry(patch: Partial<NatureEntry>) {
     setEntry((current) => (current ? { ...current, ...patch } : current));
   }
 
@@ -133,10 +144,10 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
     });
   }
 
-  async function deleteFauna() {
+  async function deleteNatureEntry() {
     if (!entry) return;
     const supabase = createClient();
-    setMessage("Deleting fauna...");
+    setMessage(`Deleting ${config.lowerName}...`);
     const { error } = await supabase.from("knowledge_entries").delete().eq("id", entry.id);
 
     if (error) {
@@ -145,17 +156,17 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
       return;
     }
 
-    router.push("/dm/knowledge?tab=Fauna");
+    router.push(config.returnHref);
   }
 
   return (
     <div className="bestiary-detail-page">
       <div className="npc-detail-actions">
-        <Link className="secondary-inline-button compact-action" href="/dm/knowledge?tab=Fauna">
-          Back to Fauna
+        <Link className="secondary-inline-button compact-action" href={config.returnHref}>
+          Back to {kind}
         </Link>
         <button className="danger-inline-button compact-action" onClick={() => setShowDeleteConfirm(true)}>
-          Delete Fauna
+          Delete {kind}
         </button>
         {message ? <span>{message}</span> : null}
       </div>
@@ -186,19 +197,19 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
                 {getLocationLabel(locationId, locations)} x
               </button>
             ))}
-            {entry.location_ids.length === 0 ? <p className="subcopy">No fauna areas have been added yet.</p> : null}
+            {entry.location_ids.length === 0 ? <p className="subcopy">No {config.lowerName} areas have been added yet.</p> : null}
           </div>
         </div>
 
         <div className="bestiary-book-page">
           <div className="fauna-detail-title-grid">
             <label className="field npc-name-field">
-              <span>Fauna Name</span>
+              <span>{kind} Name</span>
               <input value={entry.name} onChange={(event) => updateEntry({ name: event.target.value })} />
             </label>
             <label className="field">
               <span>Type</span>
-              <input value={entry.entry_type} onChange={(event) => updateEntry({ entry_type: event.target.value })} placeholder="Mount, predator, fish" />
+              <input value={entry.entry_type} onChange={(event) => updateEntry({ entry_type: event.target.value })} placeholder={config.typePlaceholder} />
             </label>
           </div>
 
@@ -213,7 +224,7 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
             </label>
             <label className="field">
               <span>Visibility</span>
-              <select value={entry.visibility} onChange={(event) => updateEntry({ visibility: event.target.value as FaunaEntry["visibility"] })}>
+              <select value={entry.visibility} onChange={(event) => updateEntry({ visibility: event.target.value as NatureEntry["visibility"] })}>
                 <option value="chronicler">Chronicler Only</option>
                 <option value="hinted">Hinted</option>
                 <option value="discovered">Discovered</option>
@@ -228,24 +239,24 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
           </label>
 
           <label className="field">
-            <span>Detailed Fauna Notes</span>
+            <span>Detailed {kind} Notes</span>
             <textarea value={entry.details} onChange={(event) => updateEntry({ details: event.target.value })} />
           </label>
         </div>
       </section>
 
       {showDeleteConfirm ? (
-        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-fauna-title">
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-nature-title">
           <section className="confirm-dialog">
             <p className="eyebrow">Protected Delete</p>
-            <h3 id="delete-fauna-title">Delete {entry.name}?</h3>
-            <p className="subcopy">This will permanently remove this fauna entry from Chronicler Knowledge.</p>
+            <h3 id="delete-nature-title">Delete {entry.name}?</h3>
+            <p className="subcopy">This will permanently remove this {config.lowerName} entry from Chronicler Knowledge.</p>
             <div className="confirm-actions">
               <button className="secondary-button" onClick={() => setShowDeleteConfirm(false)}>
                 Cancel
               </button>
-              <button className="danger-inline-button" onClick={deleteFauna}>
-                Delete Fauna
+              <button className="danger-inline-button" onClick={deleteNatureEntry}>
+                Delete {kind}
               </button>
             </div>
           </section>
@@ -255,13 +266,13 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
   );
 }
 
-function normalizeFaunaEntry(entry: Partial<FaunaEntry> & { id: string }): FaunaEntry {
+function normalizeNatureEntry(entry: Partial<NatureEntry> & { id: string }, kind: NatureEntryKind): NatureEntry {
   return {
     id: entry.id,
     owner_user_id: entry.owner_user_id || null,
     category_id: entry.category_id || null,
-    category: entry.category || "Fauna",
-    name: entry.name || "Unnamed Fauna",
+    category: entry.category || kind,
+    name: entry.name || `Unnamed ${kind}`,
     entry_type: entry.entry_type || "",
     image_url: entry.image_url || "",
     summary: entry.summary || "",
@@ -271,6 +282,14 @@ function normalizeFaunaEntry(entry: Partial<FaunaEntry> & { id: string }): Fauna
     environment: entry.environment || "",
     rarity: entry.rarity || "",
     visibility: entry.visibility || "chronicler",
+  };
+}
+
+function getNatureEntryConfig(kind: NatureEntryKind) {
+  return {
+    lowerName: kind.toLowerCase(),
+    returnHref: `/dm/knowledge?tab=${kind}`,
+    typePlaceholder: kind === "Fauna" ? "Mount, predator, fish" : "Herb, crop, poison",
   };
 }
 
