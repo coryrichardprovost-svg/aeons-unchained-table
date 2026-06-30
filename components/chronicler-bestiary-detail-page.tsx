@@ -218,9 +218,8 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
           </label>
           <div className="bestiary-origin-chip-list">
             {creature.origin_location_ids.map((locationId) => (
-              <button className="atlas-npc-chip" key={locationId} onClick={() => removeOriginLocation(locationId)}>
-                <strong>{getLocationLabel(locationId, locations)}</strong>
-                <span>Remove</span>
+              <button type="button" className="tag teal tag-button" key={locationId} onClick={() => removeOriginLocation(locationId)}>
+                {getLocationLabel(locationId, locations)} x
               </button>
             ))}
             {creature.origin_location_ids.length === 0 ? <p className="subcopy">No origin areas have been added yet.</p> : null}

@@ -182,7 +182,7 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
           </label>
           <div className="bestiary-origin-chip-list">
             {entry.location_ids.map((locationId) => (
-              <button type="button" className="tag teal" onClick={() => removeLocation(locationId)} key={locationId}>
+              <button type="button" className="tag teal tag-button" onClick={() => removeLocation(locationId)} key={locationId}>
                 {getLocationLabel(locationId, locations)} x
               </button>
             ))}
