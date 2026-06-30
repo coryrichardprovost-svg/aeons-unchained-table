@@ -181,14 +181,14 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
       return;
     }
 
-    router.push("/dm/knowledge");
+    router.push("/dm/knowledge?tab=Bestiary");
   }
 
   return (
     <div className="bestiary-detail-page">
       <div className="npc-detail-actions">
-        <Link className="secondary-inline-button compact-action" href="/dm/knowledge">
-          Back to Knowledge
+        <Link className="secondary-inline-button compact-action" href="/dm/knowledge?tab=Bestiary">
+          Back to Bestiary
         </Link>
         <button className="danger-inline-button compact-action" onClick={() => setShowDeleteConfirm(true)}>
           Delete Creature

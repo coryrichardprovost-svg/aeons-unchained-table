@@ -117,11 +117,12 @@ export function ChroniclerKnowledgePage() {
     }
 
     const loadedCategories = ((categoryData || []) as KnowledgeCategory[]).sort((first, second) => first.sort_order - second.sort_order || first.name.localeCompare(second.name));
+    const requestedCategory = loadedCategories.find((category) => getTabSlug(category.name) === getTabSlug(getRequestedKnowledgeTab()));
     setCategories(loadedCategories);
     setCreatures((creatureData || []) as CreatureRecord[]);
     setEntries((entryData || []) as KnowledgeEntry[]);
     setLocations((locationData || []) as WorldLocation[]);
-    setActiveCategoryId((current) => (current && loadedCategories.some((category) => category.id === current) ? current : loadedCategories[0]?.id || ""));
+    setActiveCategoryId((current) => requestedCategory?.id || (current && loadedCategories.some((category) => category.id === current) ? current : loadedCategories[0]?.id || ""));
     setIsLoading(false);
   }, []);
 
@@ -362,6 +363,11 @@ export function ChroniclerKnowledgePage() {
     setEditingCategoryName(category.name);
   }
 
+  function chooseCategory(category: KnowledgeCategory) {
+    setActiveCategoryId(category.id);
+    setKnowledgeTabUrl(category.name);
+  }
+
   function updateEntry(entry: KnowledgeEntry) {
     setEntries((current) => current.map((candidate) => (candidate.id === entry.id ? entry : candidate)));
   }
@@ -432,7 +438,7 @@ export function ChroniclerKnowledgePage() {
                   }}
                 />
               ) : (
-                <button className="knowledge-tab" onClick={() => setActiveCategoryId(category.id)}>
+                <button className="knowledge-tab" onClick={() => chooseCategory(category)}>
                   {category.name}
                 </button>
               )}
@@ -891,6 +897,22 @@ function getDeleteDialogCopy(pendingDelete: NonNullable<PendingDelete>) {
 
 function isCoreKnowledgeCategory(category: KnowledgeCategory) {
   return category.category_kind === "bestiary" || category.sort_order <= coreKnowledgeSortOrderLimit;
+}
+
+function getRequestedKnowledgeTab() {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("tab") || "";
+}
+
+function setKnowledgeTabUrl(categoryName: string) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("tab", categoryName);
+  window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
+function getTabSlug(value: string) {
+  return value.trim().toLowerCase();
 }
 
 function formatStatusValue(value: string | { current?: string; max?: string } | undefined) {

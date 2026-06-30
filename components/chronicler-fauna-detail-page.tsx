@@ -145,14 +145,14 @@ export function ChroniclerFaunaDetailPage({ faunaId }: { faunaId: string }) {
       return;
     }
 
-    router.push("/dm/knowledge");
+    router.push("/dm/knowledge?tab=Fauna");
   }
 
   return (
     <div className="bestiary-detail-page">
       <div className="npc-detail-actions">
-        <Link className="secondary-inline-button compact-action" href="/dm/knowledge">
-          Back to Knowledge
+        <Link className="secondary-inline-button compact-action" href="/dm/knowledge?tab=Fauna">
+          Back to Fauna
         </Link>
         <button className="danger-inline-button compact-action" onClick={() => setShowDeleteConfirm(true)}>
           Delete Fauna
