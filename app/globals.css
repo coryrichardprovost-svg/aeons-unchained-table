@@ -1552,10 +1552,43 @@ h1 {
   -webkit-line-clamp: 3;
 }
 
-.bestiary-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 14px 14px;
+.bestiary-card-stats {
+  display: grid;
+  gap: 8px;
+}
+
+.bestiary-card-status-row,
+.bestiary-card-attribute-row {
+  display: grid;
+  gap: 5px;
+}
+
+.bestiary-card-status-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.bestiary-card-attribute-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.bestiary-card-stats span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(244, 239, 226, 0.11);
+  border-radius: 6px;
+  background: rgba(17, 16, 14, 0.28);
+  color: var(--ink);
+  font-size: 12px;
+  text-align: center;
+}
+
+.bestiary-card-stats strong {
+  margin: 0;
+  color: var(--gold);
+  font-size: 10px;
+  line-height: 1;
 }
 
 .bestiary-book {

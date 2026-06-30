@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
@@ -34,10 +35,12 @@ const statusKeys: CreatureStatusKey[] = ["health", "stamina", "mind", "divinity"
 const attributeKeys: CreatureAttributeKey[] = ["str", "spd", "int", "cha", "con", "dex", "wis", "fth"];
 
 export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: string }) {
+  const router = useRouter();
   const [creature, setCreature] = useState<CreatureRecord | null>(null);
   const [locations, setLocations] = useState<WorldLocation[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const hasLoadedAutoSave = useRef(false);
 
   const loadCreature = useCallback(async () => {
@@ -142,12 +145,30 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
     );
   }
 
+  async function deleteCreature() {
+    if (!creature) return;
+    const supabase = createClient();
+    setMessage("Deleting creature...");
+    const { error } = await supabase.from("bestiary_creatures").delete().eq("id", creature.id);
+
+    if (error) {
+      setMessage(error.message);
+      setShowDeleteConfirm(false);
+      return;
+    }
+
+    router.push("/dm/knowledge");
+  }
+
   return (
     <div className="bestiary-detail-page">
       <div className="npc-detail-actions">
         <Link className="secondary-inline-button compact-action" href="/dm/knowledge">
           Back to Knowledge
         </Link>
+        <button className="danger-inline-button compact-action" onClick={() => setShowDeleteConfirm(true)}>
+          Delete Creature
+        </button>
         {message ? <span>{message}</span> : null}
       </div>
 
@@ -246,6 +267,24 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
           </div>
         </div>
       </section>
+
+      {showDeleteConfirm ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-creature-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">Protected Delete</p>
+            <h3 id="delete-creature-title">Delete {creature.name}?</h3>
+            <p className="subcopy">This will permanently remove this creature from the Bestiary, including its status, attributes, notes, and origin link.</p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </button>
+              <button className="danger-inline-button" onClick={deleteCreature}>
+                Delete Creature
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

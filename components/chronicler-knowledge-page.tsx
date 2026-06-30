@@ -30,6 +30,8 @@ type CreatureRecord = {
   origin_location_id: string | null;
   strengths: string;
   weaknesses: string;
+  status: Partial<Record<"health" | "stamina" | "mind" | "divinity", { current?: string; max?: string }>>;
+  attributes: Partial<Record<"str" | "spd" | "int" | "cha" | "con" | "dex" | "wis" | "fth", string>>;
   visibility: "chronicler" | "players";
 };
 
@@ -51,7 +53,6 @@ type KnowledgeEntry = {
 
 type PendingDelete =
   | { kind: "category"; category: KnowledgeCategory }
-  | { kind: "creature"; creature: CreatureRecord }
   | null;
 
 export function ChroniclerKnowledgePage() {
@@ -296,27 +297,11 @@ export function ChroniclerKnowledgePage() {
     setMessage(`${category.name} category removed.`);
   }
 
-  async function deleteCreature(creature: CreatureRecord) {
-    const supabase = createClient();
-    const { error } = await supabase.from("bestiary_creatures").delete().eq("id", creature.id);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setCreatures((current) => current.filter((candidate) => candidate.id !== creature.id));
-    setMessage(`${creature.name} deleted.`);
-  }
-
   async function confirmProtectedDelete() {
     if (!pendingDelete) return;
 
     if (pendingDelete.kind === "category") {
       await deleteCategory(pendingDelete.category);
-    }
-
-    if (pendingDelete.kind === "creature") {
-      await deleteCreature(pendingDelete.creature);
     }
 
     setPendingDelete(null);
@@ -506,17 +491,13 @@ export function ChroniclerKnowledgePage() {
                       <span>{creature.creature_type || "Unknown creature type"}</span>
                     </div>
                     <p>{creature.description || "No creature description yet."}</p>
+                    <CreatureCardStats creature={creature} />
                     <div className="market-card-meta">
                       <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
                       <span className="tag">{creature.visibility}</span>
                     </div>
                   </div>
                 </Link>
-                <div className="bestiary-card-actions">
-                  <button className="danger-inline-button compact-action" onClick={() => setPendingDelete({ kind: "creature", creature })}>
-                    Delete Creature
-                  </button>
-                </div>
               </article>
             ))}
 
@@ -703,6 +684,36 @@ function KnowledgeEntryCard({
   );
 }
 
+function CreatureCardStats({ creature }: { creature: CreatureRecord }) {
+  const statusStats = [
+    ["Health", creature.status?.health],
+    ["Stamina", creature.status?.stamina],
+    ["Mind", creature.status?.mind],
+  ] as const;
+  const attributes = ["str", "spd", "int", "cha", "con", "dex", "wis", "fth"] as const;
+
+  return (
+    <div className="bestiary-card-stats">
+      <div className="bestiary-card-status-row">
+        {statusStats.map(([label, value]) => (
+          <span key={label}>
+            <strong>{label.slice(0, 3).toUpperCase()}</strong>
+            {formatStatusValue(value)}
+          </span>
+        ))}
+      </div>
+      <div className="bestiary-card-attribute-row">
+        {attributes.map((attribute) => (
+          <span key={attribute}>
+            <strong>{attribute.toUpperCase()}</strong>
+            {creature.attributes?.[attribute] || "0"}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function getLocationLabel(locationId: string | null, locations: WorldLocation[]) {
   const location = locations.find((candidate) => candidate.id === locationId);
   return location ? `${location.name} (${location.location_type})` : "No area set";
@@ -744,18 +755,19 @@ function getTypePlaceholder(categoryName: string) {
 }
 
 function getDeleteDialogTitle(pendingDelete: NonNullable<PendingDelete>) {
-  if (pendingDelete.kind === "creature") return `Delete ${pendingDelete.creature.name}?`;
   return `Delete ${pendingDelete.category.name} tab?`;
 }
 
 function getDeleteDialogCopy(pendingDelete: NonNullable<PendingDelete>) {
-  if (pendingDelete.kind === "creature") {
-    return "This will permanently remove this creature from the Bestiary. Its status, attributes, notes, and origin link will be deleted.";
-  }
-
   if (pendingDelete.category.category_kind === "bestiary") {
     return "This removes the Bestiary tab from Knowledge. Existing creature records will stay in the database, but the tab will disappear until another Bestiary category is restored.";
   }
 
   return "This will permanently remove this Knowledge tab and delete the entries stored inside it.";
+}
+
+function formatStatusValue(value: { current?: string; max?: string } | undefined) {
+  const current = value?.current || "0";
+  const max = value?.max || "0";
+  return `${current}/${max}`;
 }
