@@ -1772,8 +1772,10 @@ h1 {
 }
 
 .bestiary-origin-chip-list {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  align-items: flex-start;
 }
 
 .bestiary-title-grid {
