@@ -161,6 +161,23 @@ create table if not exists public.bestiary_creatures (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.knowledge_entries (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid references public.profiles(id) on delete set null,
+  category text not null default 'Lore',
+  name text not null default 'New Knowledge Entry',
+  entry_type text not null default '',
+  image_url text not null default '',
+  summary text not null default '',
+  details text not null default '',
+  location_id uuid references public.world_locations(id) on delete set null,
+  environment text not null default '',
+  rarity text not null default '',
+  visibility text not null default 'chronicler' check (visibility in ('chronicler', 'hinted', 'discovered', 'players')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.item_types (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references public.profiles(id) on delete set null,
@@ -302,6 +319,11 @@ create trigger bestiary_creatures_set_updated_at
 before update on public.bestiary_creatures
 for each row execute function public.set_updated_at();
 
+drop trigger if exists knowledge_entries_set_updated_at on public.knowledge_entries;
+create trigger knowledge_entries_set_updated_at
+before update on public.knowledge_entries
+for each row execute function public.set_updated_at();
+
 drop trigger if exists item_types_set_updated_at on public.item_types;
 create trigger item_types_set_updated_at
 before update on public.item_types
@@ -335,6 +357,7 @@ alter table public.game_classes enable row level security;
 alter table public.world_locations enable row level security;
 alter table public.npcs enable row level security;
 alter table public.bestiary_creatures enable row level security;
+alter table public.knowledge_entries enable row level security;
 alter table public.item_types enable row level security;
 alter table public.items enable row level security;
 alter table public.markets enable row level security;
@@ -351,6 +374,8 @@ grant select on public.npcs to authenticated;
 grant insert, update, delete on public.npcs to authenticated;
 grant select on public.bestiary_creatures to authenticated;
 grant insert, update, delete on public.bestiary_creatures to authenticated;
+grant select on public.knowledge_entries to authenticated;
+grant insert, update, delete on public.knowledge_entries to authenticated;
 grant select on public.item_types to authenticated;
 grant insert, update, delete on public.item_types to authenticated;
 grant select on public.items to authenticated;
@@ -566,6 +591,12 @@ using (
 
 create policy "authenticated users can manage bestiary creatures"
 on public.bestiary_creatures for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "authenticated users can manage knowledge entries"
+on public.knowledge_entries for all
 to authenticated
 using (true)
 with check (true);

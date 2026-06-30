@@ -181,6 +181,23 @@ create table public.bestiary_creatures (
   updated_at timestamptz not null default now()
 );
 
+create table public.knowledge_entries (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid references public.profiles(id) on delete set null,
+  category text not null default 'Lore',
+  name text not null default 'New Knowledge Entry',
+  entry_type text not null default '',
+  image_url text not null default '',
+  summary text not null default '',
+  details text not null default '',
+  location_id uuid references public.world_locations(id) on delete set null,
+  environment text not null default '',
+  rarity text not null default '',
+  visibility text not null default 'chronicler' check (visibility in ('chronicler', 'hinted', 'discovered', 'players')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table public.item_types (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references public.profiles(id) on delete set null,
@@ -282,6 +299,7 @@ grant select, insert, update, delete on public.game_classes to authenticated;
 grant select, insert, update, delete on public.world_locations to authenticated;
 grant select, insert, update, delete on public.npcs to authenticated;
 grant select, insert, update, delete on public.bestiary_creatures to authenticated;
+grant select, insert, update, delete on public.knowledge_entries to authenticated;
 grant select, insert, update, delete on public.item_types to authenticated;
 grant select, insert, update, delete on public.items to authenticated;
 grant select, insert, update, delete on public.markets to authenticated;
@@ -325,6 +343,10 @@ for each row execute function public.set_updated_at();
 
 create trigger bestiary_creatures_set_updated_at
 before update on public.bestiary_creatures
+for each row execute function public.set_updated_at();
+
+create trigger knowledge_entries_set_updated_at
+before update on public.knowledge_entries
 for each row execute function public.set_updated_at();
 
 create trigger item_types_set_updated_at
@@ -411,6 +433,7 @@ alter table public.game_classes enable row level security;
 alter table public.world_locations enable row level security;
 alter table public.npcs enable row level security;
 alter table public.bestiary_creatures enable row level security;
+alter table public.knowledge_entries enable row level security;
 alter table public.item_types enable row level security;
 alter table public.items enable row level security;
 alter table public.markets enable row level security;
@@ -623,6 +646,12 @@ using (
 
 create policy "authenticated users can manage bestiary creatures"
 on public.bestiary_creatures for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "authenticated users can manage knowledge entries"
+on public.knowledge_entries for all
 to authenticated
 using (true)
 with check (true);

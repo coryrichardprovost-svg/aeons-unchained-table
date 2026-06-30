@@ -1398,8 +1398,15 @@ h1 {
   color: var(--ink);
 }
 
-.knowledge-search-card {
-  max-width: 520px;
+.knowledge-filter-card {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.knowledge-search-field {
+  min-width: 0;
 }
 
 .bestiary-card-grid {
@@ -1521,6 +1528,64 @@ h1 {
   display: grid;
   grid-template-columns: minmax(280px, 0.88fr) minmax(0, 1.12fr);
   gap: 16px;
+}
+
+.knowledge-entry-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.knowledge-entry-card {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.045);
+}
+
+.knowledge-entry-image {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  background-color: rgba(17, 16, 14, 0.48);
+  background-position: center;
+  background-size: cover;
+  border-right: 1px solid var(--line);
+  color: rgba(214, 179, 104, 0.86);
+  font-family: var(--font-display);
+  font-size: 46px;
+}
+
+.knowledge-entry-body {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.knowledge-entry-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.45fr);
+  gap: 12px;
+}
+
+.knowledge-entry-small-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(120px, 0.7fr));
+  gap: 12px;
+}
+
+.knowledge-entry-card textarea {
+  min-height: 96px;
+}
+
+.knowledge-entry-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .market-detail-page {
@@ -3621,7 +3686,11 @@ ul {
   .bestiary-card-grid,
   .bestiary-book,
   .bestiary-title-grid,
-  .bestiary-stat-grid {
+  .bestiary-stat-grid,
+  .knowledge-filter-card,
+  .knowledge-entry-card,
+  .knowledge-entry-heading,
+  .knowledge-entry-small-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3729,6 +3798,12 @@ ul {
   .bestiary-book-page {
     min-height: auto;
   }
+
+  .knowledge-entry-image {
+    min-height: 180px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
 }
 
 @media (max-width: 680px) {
@@ -3778,10 +3853,6 @@ ul {
 
   .table-row {
     grid-template-columns: 1fr;
-  }
-
-  .knowledge-search-card {
-    max-width: none;
   }
 
   .bestiary-split-notes,
