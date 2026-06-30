@@ -28,11 +28,19 @@ type AtlasNpc = {
   organization: string;
 };
 
+type AtlasMarket = {
+  id: string;
+  name: string;
+  location_id: string | null;
+  market_type: string;
+};
+
 const locationTypes = ["Continent", "Region", "City", "Town", "Village", "District", "Landmark", "Wilderness", "Dungeon", "Building", "Point of Interest"];
 
 export function ChroniclerWorldAtlasPage() {
   const [locations, setLocations] = useState<WorldLocation[]>([]);
   const [npcs, setNpcs] = useState<AtlasNpc[]>([]);
+  const [markets, setMarkets] = useState<AtlasMarket[]>([]);
   const [continentId, setContinentId] = useState("");
   const [regionId, setRegionId] = useState("");
   const [placeId, setPlaceId] = useState("");
@@ -76,9 +84,10 @@ export function ChroniclerWorldAtlasPage() {
 
   const loadLocations = useCallback(async () => {
     const supabase = createClient();
-    const [{ data: locationData, error: locationError }, { data: npcData, error: npcError }] = await Promise.all([
+    const [{ data: locationData, error: locationError }, { data: npcData, error: npcError }, { data: marketData, error: marketError }] = await Promise.all([
       supabase.from("world_locations").select("*").order("name", { ascending: true }),
       supabase.from("npcs").select("id,name,location_id,faction,organization").order("name", { ascending: true }),
+      supabase.from("markets").select("id,name,location_id,market_type").order("name", { ascending: true }),
     ]);
 
     if (locationError) {
@@ -95,8 +104,13 @@ export function ChroniclerWorldAtlasPage() {
       setMessage(npcError.message.includes("npcs") ? "Run supabase/migrations/012_add_npcs.sql in Supabase SQL Editor." : npcError.message);
     }
 
+    if (marketError) {
+      setMessage(marketError.message.includes("markets") ? "Run supabase/migrations/014_add_markets.sql in Supabase SQL Editor." : marketError.message);
+    }
+
     setLocations((locationData || []) as WorldLocation[]);
     setNpcs((npcData || []) as AtlasNpc[]);
+    setMarkets((marketData || []) as AtlasMarket[]);
     setIsLoading(false);
   }, []);
 
@@ -320,7 +334,7 @@ export function ChroniclerWorldAtlasPage() {
           <span className="tag gold">{selectedLocation?.location_type || "No area selected"}</span>
         </div>
         {selectedLocation ? (
-          <AtlasAreaSummary location={selectedLocation} locations={locations} npcs={npcs} onSelect={selectLocation} />
+          <AtlasAreaSummary location={selectedLocation} locations={locations} npcs={npcs} markets={markets} onSelect={selectLocation} />
         ) : (
           <p className="subcopy">Choose a continent, region, place, or specific location to view its information.</p>
         )}
@@ -405,17 +419,20 @@ function AtlasAreaSummary({
   location,
   locations,
   npcs,
+  markets,
   onSelect,
 }: {
   location: WorldLocation;
   locations: WorldLocation[];
   npcs: AtlasNpc[];
+  markets: AtlasMarket[];
   onSelect: (location: WorldLocation) => void;
 }) {
   const childLocations = getChildLocations(location.id, locations);
   const groupedChildLocations = groupLocationsByType(childLocations);
   const specialLocationCount = getSpecialLocationCount(location.id, locations);
   const locationNpcs = npcs.filter((npc) => npc.location_id === location.id);
+  const locationMarkets = markets.filter((market) => market.location_id === location.id);
 
   return (
     <div className="atlas-area-summary">
@@ -477,6 +494,22 @@ function AtlasAreaSummary({
             </Link>
           ))}
           {locationNpcs.length === 0 ? <p className="subcopy">No NPCs are connected to this area yet.</p> : null}
+        </div>
+      </section>
+
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>Markets In This Area</h3>
+          <span className="tag gold">{locationMarkets.length}</span>
+        </div>
+        <div className="atlas-npc-list">
+          {locationMarkets.map((market) => (
+            <Link href={`/dm/market/${market.id}`} className="atlas-npc-chip" key={market.id}>
+              <strong>{market.name}</strong>
+              <span>{market.market_type || "Market"}</span>
+            </Link>
+          ))}
+          {locationMarkets.length === 0 ? <p className="subcopy">No markets are connected to this area yet.</p> : null}
         </div>
       </section>
 
