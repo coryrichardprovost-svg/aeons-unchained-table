@@ -181,9 +181,20 @@ create table public.bestiary_creatures (
   updated_at timestamptz not null default now()
 );
 
+create table public.knowledge_categories (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid references public.profiles(id) on delete set null,
+  name text not null unique,
+  category_kind text not null default 'generic' check (category_kind in ('bestiary', 'generic')),
+  sort_order integer not null default 100,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table public.knowledge_entries (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references public.profiles(id) on delete set null,
+  category_id uuid references public.knowledge_categories(id) on delete set null,
   category text not null default 'Lore',
   name text not null default 'New Knowledge Entry',
   entry_type text not null default '',
@@ -272,6 +283,20 @@ values
   ('Accessories', '["name", "description", "protection", "defense", "resistance", "value", "weight"]'::jsonb, true, 40),
   ('Miscellaneous', '["name", "description", "value", "weight"]'::jsonb, true, 50);
 
+insert into public.knowledge_categories (name, category_kind, sort_order)
+values
+  ('Bestiary', 'bestiary', 10),
+  ('Fauna', 'generic', 20),
+  ('Flora', 'generic', 30),
+  ('Enemies', 'generic', 40),
+  ('Factions', 'generic', 50),
+  ('History', 'generic', 60),
+  ('Cultures', 'generic', 70),
+  ('Magic', 'generic', 80),
+  ('Artifacts', 'generic', 90),
+  ('Materials', 'generic', 100),
+  ('Secrets', 'generic', 110);
+
 create table public.campaign_invites (
   id uuid primary key default gen_random_uuid(),
   campaign_id uuid not null references public.campaigns(id) on delete cascade,
@@ -299,6 +324,7 @@ grant select, insert, update, delete on public.game_classes to authenticated;
 grant select, insert, update, delete on public.world_locations to authenticated;
 grant select, insert, update, delete on public.npcs to authenticated;
 grant select, insert, update, delete on public.bestiary_creatures to authenticated;
+grant select, insert, update, delete on public.knowledge_categories to authenticated;
 grant select, insert, update, delete on public.knowledge_entries to authenticated;
 grant select, insert, update, delete on public.item_types to authenticated;
 grant select, insert, update, delete on public.items to authenticated;
@@ -347,6 +373,10 @@ for each row execute function public.set_updated_at();
 
 create trigger knowledge_entries_set_updated_at
 before update on public.knowledge_entries
+for each row execute function public.set_updated_at();
+
+create trigger knowledge_categories_set_updated_at
+before update on public.knowledge_categories
 for each row execute function public.set_updated_at();
 
 create trigger item_types_set_updated_at
@@ -433,6 +463,7 @@ alter table public.game_classes enable row level security;
 alter table public.world_locations enable row level security;
 alter table public.npcs enable row level security;
 alter table public.bestiary_creatures enable row level security;
+alter table public.knowledge_categories enable row level security;
 alter table public.knowledge_entries enable row level security;
 alter table public.item_types enable row level security;
 alter table public.items enable row level security;
@@ -652,6 +683,12 @@ with check (true);
 
 create policy "authenticated users can manage knowledge entries"
 on public.knowledge_entries for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "authenticated users can manage knowledge categories"
+on public.knowledge_categories for all
 to authenticated
 using (true)
 with check (true);

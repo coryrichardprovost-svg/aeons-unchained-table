@@ -12,6 +12,14 @@ type WorldLocation = {
   location_type: string;
 };
 
+type KnowledgeCategory = {
+  id: string;
+  owner_user_id: string | null;
+  name: string;
+  category_kind: "bestiary" | "generic";
+  sort_order: number;
+};
+
 type CreatureRecord = {
   id: string;
   owner_user_id: string | null;
@@ -25,12 +33,11 @@ type CreatureRecord = {
   visibility: "chronicler" | "players";
 };
 
-type KnowledgeCategory = (typeof knowledgeTabs)[number];
-
 type KnowledgeEntry = {
   id: string;
   owner_user_id: string | null;
-  category: KnowledgeCategory;
+  category_id: string | null;
+  category: string;
   name: string;
   entry_type: string;
   image_url: string;
@@ -42,16 +49,17 @@ type KnowledgeEntry = {
   visibility: "chronicler" | "hinted" | "discovered" | "players";
 };
 
-const knowledgeTabs = ["Bestiary", "Fauna", "Flora", "Enemies", "Factions", "History", "Cultures", "Magic", "Artifacts", "Materials", "Secrets"] as const;
-const genericTabs = knowledgeTabs.filter((tab) => tab !== "Bestiary") as KnowledgeCategory[];
-
 export function ChroniclerKnowledgePage() {
   const router = useRouter();
+  const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
   const [creatures, setCreatures] = useState<CreatureRecord[]>([]);
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [locations, setLocations] = useState<WorldLocation[]>([]);
-  const [activeTab, setActiveTab] = useState<KnowledgeCategory>("Bestiary");
+  const [activeCategoryId, setActiveCategoryId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState("");
+  const [editingCategoryName, setEditingCategoryName] = useState("");
   const [continentId, setContinentId] = useState("");
   const [regionId, setRegionId] = useState("");
   const [areaId, setAreaId] = useState("");
@@ -61,12 +69,23 @@ export function ChroniclerKnowledgePage() {
 
   const loadKnowledge = useCallback(async () => {
     const supabase = createClient();
-    const [{ data: creatureData, error: creatureError }, { data: entryData, error: entryError }, { data: locationData, error: locationError }] =
-      await Promise.all([
-        supabase.from("bestiary_creatures").select("*").order("name", { ascending: true }),
-        supabase.from("knowledge_entries").select("*").order("name", { ascending: true }),
-        supabase.from("world_locations").select("id,parent_location_id,name,location_type").order("name", { ascending: true }),
-      ]);
+    const [
+      { data: categoryData, error: categoryError },
+      { data: creatureData, error: creatureError },
+      { data: entryData, error: entryError },
+      { data: locationData, error: locationError },
+    ] = await Promise.all([
+      supabase.from("knowledge_categories").select("*").order("sort_order", { ascending: true }),
+      supabase.from("bestiary_creatures").select("*").order("name", { ascending: true }),
+      supabase.from("knowledge_entries").select("*").order("name", { ascending: true }),
+      supabase.from("world_locations").select("id,parent_location_id,name,location_type").order("name", { ascending: true }),
+    ]);
+
+    if (categoryError) {
+      setMessage(categoryError.message.includes("knowledge_categories") ? "Run supabase/migrations/020_add_knowledge_categories.sql in Supabase SQL Editor." : categoryError.message);
+      setIsLoading(false);
+      return;
+    }
 
     if (creatureError) {
       setMessage(creatureError.message.includes("bestiary_creatures") ? "Run supabase/migrations/018_rebuild_bestiary_access.sql in Supabase SQL Editor." : creatureError.message);
@@ -86,9 +105,12 @@ export function ChroniclerKnowledgePage() {
       return;
     }
 
+    const loadedCategories = ((categoryData || []) as KnowledgeCategory[]).sort((first, second) => first.sort_order - second.sort_order || first.name.localeCompare(second.name));
+    setCategories(loadedCategories);
     setCreatures((creatureData || []) as CreatureRecord[]);
     setEntries((entryData || []) as KnowledgeEntry[]);
     setLocations((locationData || []) as WorldLocation[]);
+    setActiveCategoryId((current) => (current && loadedCategories.some((category) => category.id === current) ? current : loadedCategories[0]?.id || ""));
     setIsLoading(false);
   }, []);
 
@@ -98,6 +120,9 @@ export function ChroniclerKnowledgePage() {
     void loadKnowledge();
   }, [loadKnowledge]);
 
+  const activeCategory = useMemo(() => categories.find((category) => category.id === activeCategoryId) || categories[0] || null, [activeCategoryId, categories]);
+  const activeCategoryName = activeCategory?.name || "Knowledge";
+  const isBestiaryCategory = activeCategory?.category_kind === "bestiary";
   const continents = useMemo(() => locations.filter((location) => location.location_type === "Continent" && !location.parent_location_id), [locations]);
   const regions = useMemo(() => locations.filter((location) => location.parent_location_id === continentId), [locations, continentId]);
   const areas = useMemo(() => locations.filter((location) => location.parent_location_id === regionId), [locations, regionId]);
@@ -117,16 +142,16 @@ export function ChroniclerKnowledgePage() {
   const filteredEntries = useMemo(() => {
     const cleanSearch = searchTerm.trim().toLowerCase();
     return entries.filter((entry) => {
-      const matchesTab = entry.category === activeTab;
+      const matchesCategory = activeCategory ? entry.category_id === activeCategory.id || (!entry.category_id && entry.category === activeCategory.name) : false;
       const matchesSearch =
         !cleanSearch ||
         entry.name.toLowerCase().includes(cleanSearch) ||
         entry.entry_type.toLowerCase().includes(cleanSearch) ||
         entry.summary.toLowerCase().includes(cleanSearch);
       const matchesLocation = selectedLocationIds.size === 0 || (entry.location_id ? selectedLocationIds.has(entry.location_id) : false);
-      return matchesTab && matchesSearch && matchesLocation;
+      return matchesCategory && matchesSearch && matchesLocation;
     });
-  }, [activeTab, entries, searchTerm, selectedLocationIds]);
+  }, [activeCategory, entries, searchTerm, selectedLocationIds]);
 
   async function createCreature() {
     const supabase = createClient();
@@ -153,6 +178,7 @@ export function ChroniclerKnowledgePage() {
   }
 
   async function createKnowledgeEntry() {
+    if (!activeCategory) return;
     const supabase = createClient();
     const {
       data: { user },
@@ -162,8 +188,9 @@ export function ChroniclerKnowledgePage() {
       .from("knowledge_entries")
       .insert({
         owner_user_id: user?.id,
-        category: activeTab,
-        name: `New ${activeTab} Entry`,
+        category_id: activeCategory.id,
+        category: activeCategory.name,
+        name: `New ${activeCategory.name} Entry`,
         location_id: selectedLocationId || null,
       })
       .select("*")
@@ -175,7 +202,104 @@ export function ChroniclerKnowledgePage() {
     }
 
     setEntries((current) => [data as KnowledgeEntry, ...current]);
-    setMessage(`${activeTab} entry created.`);
+    setMessage(`${activeCategory.name} entry created.`);
+  }
+
+  async function createCategory() {
+    const cleanName = newCategoryName.trim();
+    if (!cleanName) return;
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const nextSortOrder = Math.max(0, ...categories.map((category) => category.sort_order)) + 10;
+    const { data, error } = await supabase
+      .from("knowledge_categories")
+      .insert({
+        owner_user_id: user?.id,
+        name: cleanName,
+        category_kind: "generic",
+        sort_order: nextSortOrder,
+      })
+      .select("*")
+      .single();
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    const createdCategory = data as KnowledgeCategory;
+    setCategories((current) => [...current, createdCategory].sort((first, second) => first.sort_order - second.sort_order || first.name.localeCompare(second.name)));
+    setActiveCategoryId(createdCategory.id);
+    setNewCategoryName("");
+    setMessage(`${createdCategory.name} category created.`);
+  }
+
+  async function renameCategory(category: KnowledgeCategory) {
+    const cleanName = editingCategoryName.trim();
+    if (!cleanName || cleanName === category.name) {
+      setEditingCategoryId("");
+      setEditingCategoryName("");
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase.from("knowledge_categories").update({ name: cleanName }).eq("id", category.id);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    await supabase.from("knowledge_entries").update({ category: cleanName }).eq("category_id", category.id);
+    setCategories((current) => current.map((candidate) => (candidate.id === category.id ? { ...candidate, name: cleanName } : candidate)));
+    setEntries((current) => current.map((entry) => (entry.category_id === category.id ? { ...entry, category: cleanName } : entry)));
+    setEditingCategoryId("");
+    setEditingCategoryName("");
+    setMessage(`${category.name} renamed to ${cleanName}.`);
+  }
+
+  async function deleteCategory(category: KnowledgeCategory) {
+    const confirmed = window.confirm(
+      category.category_kind === "bestiary"
+        ? `Remove the ${category.name} tab? Existing creatures will stay in the database, but this tab will disappear until another Bestiary category is added through SQL.`
+        : `Delete the ${category.name} tab and its entries?`,
+    );
+    if (!confirmed) return;
+
+    const supabase = createClient();
+    if (category.category_kind === "generic") {
+      const { error: linkedEntryError } = await supabase.from("knowledge_entries").delete().eq("category_id", category.id);
+      if (linkedEntryError) {
+        setMessage(linkedEntryError.message);
+        return;
+      }
+
+      const { error: legacyEntryError } = await supabase.from("knowledge_entries").delete().is("category_id", null).eq("category", category.name);
+      const entryError = legacyEntryError;
+      if (entryError) {
+        setMessage(entryError.message);
+        return;
+      }
+    }
+
+    const { error } = await supabase.from("knowledge_categories").delete().eq("id", category.id);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    const nextCategories = categories.filter((candidate) => candidate.id !== category.id);
+    setCategories(nextCategories);
+    setEntries((current) => current.filter((entry) => entry.category_id !== category.id && entry.category !== category.name));
+    setActiveCategoryId((current) => (current === category.id ? nextCategories[0]?.id || "" : current));
+    setMessage(`${category.name} category removed.`);
+  }
+
+  function beginRenameCategory(category: KnowledgeCategory) {
+    setEditingCategoryId(category.id);
+    setEditingCategoryName(category.name);
   }
 
   function updateEntry(entry: KnowledgeEntry) {
@@ -229,23 +353,54 @@ export function ChroniclerKnowledgePage() {
             <h3>Chronicler Knowledge</h3>
             <p className="subcopy">Build the private lore library and focus it by any area in the World Atlas.</p>
           </div>
-          <button className="primary-inline-button compact-action" onClick={activeTab === "Bestiary" ? createCreature : createKnowledgeEntry}>
-            New {activeTab === "Bestiary" ? "Creature" : activeTab}
-          </button>
         </div>
 
         <div className="knowledge-tabs" role="tablist" aria-label="Knowledge sections">
-          {knowledgeTabs.map((tab) => (
-            <button className={`knowledge-tab ${activeTab === tab ? "active" : ""}`} key={tab} onClick={() => setActiveTab(tab)}>
-              {tab}
-            </button>
+          {categories.map((category) => (
+            <div className={`knowledge-tab-shell ${activeCategory?.id === category.id ? "active" : ""}`} key={category.id}>
+              {editingCategoryId === category.id ? (
+                <input
+                  aria-label="Category name"
+                  value={editingCategoryName}
+                  onChange={(event) => setEditingCategoryName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void renameCategory(category);
+                    if (event.key === "Escape") {
+                      setEditingCategoryId("");
+                      setEditingCategoryName("");
+                    }
+                  }}
+                />
+              ) : (
+                <button className="knowledge-tab" onClick={() => setActiveCategoryId(category.id)}>
+                  {category.name}
+                </button>
+              )}
+
+              <button className="knowledge-tab-icon" title="Rename category" onClick={() => (editingCategoryId === category.id ? void renameCategory(category) : beginRenameCategory(category))}>
+                {editingCategoryId === category.id ? "Save" : "Edit"}
+              </button>
+              <button className="knowledge-tab-icon danger" title="Delete category" onClick={() => deleteCategory(category)}>
+                Delete
+              </button>
+            </div>
           ))}
+        </div>
+
+        <div className="knowledge-add-category">
+          <label className="field">
+            <span>New Knowledge Tab</span>
+            <input value={newCategoryName} onChange={(event) => setNewCategoryName(event.target.value)} placeholder="Example: Laws, Prophecies, Languages" />
+          </label>
+          <button className="secondary-button compact-action" onClick={createCategory}>
+            Add Tab
+          </button>
         </div>
       </section>
 
       <section className="list-card knowledge-filter-card">
         <label className="field knowledge-search-field">
-          <span>Search {activeTab}</span>
+          <span>Search {activeCategoryName}</span>
           <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Name, type, or description" />
         </label>
         <label className="field">
@@ -294,54 +449,79 @@ export function ChroniclerKnowledgePage() {
         </label>
       </section>
 
-      {activeTab === "Bestiary" ? (
-        <section className="bestiary-card-grid">
-          {filteredCreatures.map((creature) => (
-            <Link className="bestiary-card" href={`/dm/knowledge/bestiary/${creature.id}`} key={creature.id}>
-              <div className="bestiary-card-image" style={creature.image_url ? { backgroundImage: `url(${creature.image_url})` } : undefined}>
-                {!creature.image_url ? creature.name.slice(0, 1).toUpperCase() : null}
-              </div>
-              <div className="bestiary-card-body">
-                <div>
-                  <strong>{creature.name}</strong>
-                  <span>{creature.creature_type || "Unknown creature type"}</span>
-                </div>
-                <p>{creature.description || "No creature description yet."}</p>
-                <div className="market-card-meta">
-                  <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
-                  <span className="tag">{creature.visibility}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-
-          {!isLoading && filteredCreatures.length === 0 ? (
-            <div className="empty-state">
-              <strong>No creatures found.</strong>
-              <span>Create a creature or clear the search and area filters.</span>
-            </div>
-          ) : null}
+      {!activeCategory && !isLoading ? (
+        <section className="empty-state">
+          <strong>No knowledge tabs yet.</strong>
+          <span>Add a tab to start organizing the Chronicler library.</span>
         </section>
-      ) : (
-        <section className="knowledge-entry-grid">
-          {filteredEntries.map((entry) => (
-            <KnowledgeEntryCard
-              entry={entry}
-              locations={locations}
-              onChange={updateEntry}
-              onDelete={() => deleteEntry(entry.id)}
-              key={entry.id}
-            />
-          ))}
+      ) : null}
 
-          {!isLoading && filteredEntries.length === 0 ? (
-            <div className="empty-state">
-              <strong>No {activeTab.toLowerCase()} entries found.</strong>
-              <span>Create an entry or clear the search and area filters.</span>
+      {isBestiaryCategory ? (
+        <section className="knowledge-section">
+          <div className="knowledge-section-header">
+            <div>
+              <h3>{activeCategoryName}</h3>
+              <p className="subcopy">Creature entries with status, attributes, strengths, weaknesses, and regional origin.</p>
             </div>
-          ) : null}
+            <button className="primary-inline-button compact-action" onClick={createCreature}>
+              New Creature
+            </button>
+          </div>
+
+          <div className="bestiary-card-grid">
+            {filteredCreatures.map((creature) => (
+              <Link className="bestiary-card" href={`/dm/knowledge/bestiary/${creature.id}`} key={creature.id}>
+                <div className="bestiary-card-image" style={creature.image_url ? { backgroundImage: `url(${creature.image_url})` } : undefined}>
+                  {!creature.image_url ? creature.name.slice(0, 1).toUpperCase() : null}
+                </div>
+                <div className="bestiary-card-body">
+                  <div>
+                    <strong>{creature.name}</strong>
+                    <span>{creature.creature_type || "Unknown creature type"}</span>
+                  </div>
+                  <p>{creature.description || "No creature description yet."}</p>
+                  <div className="market-card-meta">
+                    <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
+                    <span className="tag">{creature.visibility}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+
+            {!isLoading && filteredCreatures.length === 0 ? (
+              <div className="empty-state">
+                <strong>No creatures found.</strong>
+                <span>Create a creature or clear the search and area filters.</span>
+              </div>
+            ) : null}
+          </div>
         </section>
-      )}
+      ) : activeCategory ? (
+        <section className="knowledge-section">
+          <div className="knowledge-section-header">
+            <div>
+              <h3>{activeCategoryName}</h3>
+              <p className="subcopy">Area-linked lore entries for this knowledge category.</p>
+            </div>
+            <button className="primary-inline-button compact-action" onClick={createKnowledgeEntry}>
+              New {activeCategoryName}
+            </button>
+          </div>
+
+          <div className="knowledge-entry-grid">
+            {filteredEntries.map((entry) => (
+              <KnowledgeEntryCard entry={entry} locations={locations} categoryName={activeCategoryName} onChange={updateEntry} onDelete={() => deleteEntry(entry.id)} key={entry.id} />
+            ))}
+
+            {!isLoading && filteredEntries.length === 0 ? (
+              <div className="empty-state">
+                <strong>No {activeCategoryName.toLowerCase()} entries found.</strong>
+                <span>Create an entry or clear the search and area filters.</span>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -349,11 +529,13 @@ export function ChroniclerKnowledgePage() {
 function KnowledgeEntryCard({
   entry,
   locations,
+  categoryName,
   onChange,
   onDelete,
 }: {
   entry: KnowledgeEntry;
   locations: WorldLocation[];
+  categoryName: string;
   onChange: (entry: KnowledgeEntry) => void;
   onDelete: () => void;
 }) {
@@ -369,7 +551,7 @@ function KnowledgeEntryCard({
       const { error } = await supabase
         .from("knowledge_entries")
         .update({
-          name: localEntry.name.trim() || `Unnamed ${localEntry.category}`,
+          name: localEntry.name.trim() || `Unnamed ${categoryName}`,
           entry_type: localEntry.entry_type,
           image_url: localEntry.image_url,
           summary: localEntry.summary,
@@ -386,12 +568,12 @@ function KnowledgeEntryCard({
         return;
       }
 
-      onChange({ ...localEntry, name: localEntry.name.trim() || `Unnamed ${localEntry.category}` });
+      onChange({ ...localEntry, name: localEntry.name.trim() || `Unnamed ${categoryName}` });
       setMessage("Saved.");
     }, 650);
 
     return () => window.clearTimeout(saveTimer);
-  }, [entry, localEntry, onChange]);
+  }, [categoryName, entry, localEntry, onChange]);
 
   function patchEntry(patch: Partial<KnowledgeEntry>) {
     setLocalEntry((current) => ({ ...current, ...patch }));
@@ -400,7 +582,7 @@ function KnowledgeEntryCard({
   return (
     <article className="knowledge-entry-card">
       <div className="knowledge-entry-image" style={localEntry.image_url ? { backgroundImage: `url(${localEntry.image_url})` } : undefined}>
-        {!localEntry.image_url ? localEntry.category.slice(0, 1) : null}
+        {!localEntry.image_url ? categoryName.slice(0, 1) : null}
       </div>
       <div className="knowledge-entry-body">
         <div className="knowledge-entry-heading">
@@ -410,7 +592,7 @@ function KnowledgeEntryCard({
           </label>
           <label className="field">
             <span>Type</span>
-            <input value={localEntry.entry_type} onChange={(event) => patchEntry({ entry_type: event.target.value })} placeholder={getTypePlaceholder(localEntry.category)} />
+            <input value={localEntry.entry_type} onChange={(event) => patchEntry({ entry_type: event.target.value })} placeholder={getTypePlaceholder(categoryName)} />
           </label>
         </div>
 
@@ -495,9 +677,8 @@ function getLocationBranchIds(locationId: string, locations: WorldLocation[]) {
   return branchIds;
 }
 
-function getTypePlaceholder(category: KnowledgeCategory) {
-  const placeholders: Record<KnowledgeCategory, string> = {
-    Bestiary: "Creature",
+function getTypePlaceholder(categoryName: string) {
+  const placeholders: Record<string, string> = {
     Fauna: "Mount, predator, fish",
     Flora: "Herb, crop, poison",
     Enemies: "Bandit, cultist, soldier",
@@ -509,5 +690,5 @@ function getTypePlaceholder(category: KnowledgeCategory) {
     Materials: "Ore, wood, reagent",
     Secrets: "Rumor, hidden truth",
   };
-  return placeholders[category];
+  return placeholders[categoryName] || "Subtype, use, source";
 }

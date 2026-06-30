@@ -161,9 +161,20 @@ create table if not exists public.bestiary_creatures (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.knowledge_categories (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid references public.profiles(id) on delete set null,
+  name text not null unique,
+  category_kind text not null default 'generic' check (category_kind in ('bestiary', 'generic')),
+  sort_order integer not null default 100,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.knowledge_entries (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid references public.profiles(id) on delete set null,
+  category_id uuid references public.knowledge_categories(id) on delete set null,
   category text not null default 'Lore',
   name text not null default 'New Knowledge Entry',
   entry_type text not null default '',
@@ -253,6 +264,21 @@ values
   ('Miscellaneous', '["name", "description", "value", "weight"]'::jsonb, true, 50)
 on conflict (name) do nothing;
 
+insert into public.knowledge_categories (name, category_kind, sort_order)
+values
+  ('Bestiary', 'bestiary', 10),
+  ('Fauna', 'generic', 20),
+  ('Flora', 'generic', 30),
+  ('Enemies', 'generic', 40),
+  ('Factions', 'generic', 50),
+  ('History', 'generic', 60),
+  ('Cultures', 'generic', 70),
+  ('Magic', 'generic', 80),
+  ('Artifacts', 'generic', 90),
+  ('Materials', 'generic', 100),
+  ('Secrets', 'generic', 110)
+on conflict (name) do nothing;
+
 create table if not exists public.campaign_invites (
   id uuid primary key default gen_random_uuid(),
   campaign_id uuid not null references public.campaigns(id) on delete cascade,
@@ -324,6 +350,11 @@ create trigger knowledge_entries_set_updated_at
 before update on public.knowledge_entries
 for each row execute function public.set_updated_at();
 
+drop trigger if exists knowledge_categories_set_updated_at on public.knowledge_categories;
+create trigger knowledge_categories_set_updated_at
+before update on public.knowledge_categories
+for each row execute function public.set_updated_at();
+
 drop trigger if exists item_types_set_updated_at on public.item_types;
 create trigger item_types_set_updated_at
 before update on public.item_types
@@ -357,6 +388,7 @@ alter table public.game_classes enable row level security;
 alter table public.world_locations enable row level security;
 alter table public.npcs enable row level security;
 alter table public.bestiary_creatures enable row level security;
+alter table public.knowledge_categories enable row level security;
 alter table public.knowledge_entries enable row level security;
 alter table public.item_types enable row level security;
 alter table public.items enable row level security;
@@ -374,6 +406,8 @@ grant select on public.npcs to authenticated;
 grant insert, update, delete on public.npcs to authenticated;
 grant select on public.bestiary_creatures to authenticated;
 grant insert, update, delete on public.bestiary_creatures to authenticated;
+grant select on public.knowledge_categories to authenticated;
+grant insert, update, delete on public.knowledge_categories to authenticated;
 grant select on public.knowledge_entries to authenticated;
 grant insert, update, delete on public.knowledge_entries to authenticated;
 grant select on public.item_types to authenticated;
@@ -597,6 +631,12 @@ with check (true);
 
 create policy "authenticated users can manage knowledge entries"
 on public.knowledge_entries for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "authenticated users can manage knowledge categories"
+on public.knowledge_categories for all
 to authenticated
 using (true)
 with check (true);
