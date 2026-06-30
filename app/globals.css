@@ -1447,6 +1447,101 @@ h1 {
   gap: 12px;
 }
 
+.market-shop-stock {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.035);
+  overflow-x: auto;
+}
+
+.market-shop-stock-header {
+  min-width: 980px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.market-shop-stock-header strong {
+  display: block;
+  color: var(--gold);
+  font-size: 15px;
+}
+
+.market-shop-stock-header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.market-shop-stock-header select {
+  min-height: 40px;
+  min-width: 240px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 4px), var(--gold) calc(50% - 3px), var(--gold) calc(50% - 1px), transparent 50%) right 10px center / 9px 9px no-repeat,
+    rgba(27, 25, 21, 0.96);
+  color: var(--ink);
+  padding: 0 34px 0 12px;
+  outline: none;
+}
+
+.market-shop-stock-table {
+  min-width: 980px;
+  display: grid;
+}
+
+.market-shop-stock-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 120px 112px 84px 78px 132px minmax(180px, 1.15fr);
+}
+
+.market-shop-stock-row.curated {
+  grid-template-columns: minmax(150px, 1fr) 120px 112px 84px 78px 132px minmax(180px, 1.15fr) 82px;
+}
+
+.market-shop-stock-row > * {
+  min-height: 40px;
+  min-width: 0;
+  display: grid;
+  align-items: center;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(244, 239, 226, 0.035);
+  color: var(--ink);
+  padding: 0 8px;
+  outline: none;
+}
+
+.market-shop-stock-row > *:first-child {
+  border-left: 1px solid var(--line);
+}
+
+.market-shop-stock-head > * {
+  background: rgba(244, 239, 226, 0.075);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.market-stock-toggle {
+  place-items: center;
+}
+
+.market-stock-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.market-shop-stock-row input:focus {
+  background: rgba(66, 180, 168, 0.08);
+}
+
 .market-item-type-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.52fr);

@@ -183,6 +183,19 @@ create table if not exists public.market_shops (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.market_shop_items (
+  id uuid primary key default gen_random_uuid(),
+  shop_id uuid not null references public.market_shops(id) on delete cascade,
+  item_id uuid not null references public.items(id) on delete cascade,
+  is_available boolean not null default true,
+  quantity text not null default '',
+  price_override text not null default '',
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (shop_id, item_id)
+);
+
 insert into public.item_types (name, columns, is_default, sort_order)
 values
   ('Consumables', '["name", "description", "effect", "value", "weight"]'::jsonb, true, 10),
@@ -273,6 +286,11 @@ create trigger market_shops_set_updated_at
 before update on public.market_shops
 for each row execute function public.set_updated_at();
 
+drop trigger if exists market_shop_items_set_updated_at on public.market_shop_items;
+create trigger market_shop_items_set_updated_at
+before update on public.market_shop_items
+for each row execute function public.set_updated_at();
+
 alter table public.profiles enable row level security;
 alter table public.user_roles enable row level security;
 alter table public.campaigns enable row level security;
@@ -284,6 +302,7 @@ alter table public.item_types enable row level security;
 alter table public.items enable row level security;
 alter table public.markets enable row level security;
 alter table public.market_shops enable row level security;
+alter table public.market_shop_items enable row level security;
 alter table public.campaign_invites enable row level security;
 alter table public.campaign_members enable row level security;
 
@@ -301,6 +320,8 @@ grant select on public.markets to authenticated;
 grant insert, update, delete on public.markets to authenticated;
 grant select on public.market_shops to authenticated;
 grant insert, update, delete on public.market_shops to authenticated;
+grant select on public.market_shop_items to authenticated;
+grant insert, update, delete on public.market_shop_items to authenticated;
 
 create policy "profiles are readable by authenticated users"
 on public.profiles for select
@@ -690,6 +711,55 @@ with check (
 
 create policy "chroniclers can delete market shops"
 on public.market_shops for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "authenticated users can read market shop items"
+on public.market_shop_items for select
+to authenticated
+using (true);
+
+create policy "chroniclers can create market shop items"
+on public.market_shop_items for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "chroniclers can update market shop items"
+on public.market_shop_items for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.user_roles
+    where user_roles.user_id = auth.uid()
+      and user_roles.role = 'chronicler'
+  )
+);
+
+create policy "chroniclers can delete market shop items"
+on public.market_shop_items for delete
 to authenticated
 using (
   exists (
