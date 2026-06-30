@@ -140,6 +140,7 @@ const chroniclerNavItems: NavItem[] = [
   { href: "/dm/campaigns", label: "Campaigns", icon: "map" },
   { href: "/dm/world", label: "World Atlas", icon: "map" },
   { href: "/dm/npcs", label: "NPCs", icon: "user" },
+  { href: "/dm/knowledge", label: "Knowledge", icon: "scroll" },
   { href: "/dm/quests", label: "Quests", icon: "note" },
   { href: "/dm/market", label: "Markets", icon: "bag" },
   { href: "/dm/classes", label: "Classes", icon: "spark" },

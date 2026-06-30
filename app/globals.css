@@ -1360,6 +1360,169 @@ h1 {
   flex-wrap: wrap;
 }
 
+.knowledge-dashboard,
+.bestiary-detail-page {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.knowledge-toolbar {
+  display: grid;
+  gap: 16px;
+}
+
+.knowledge-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.knowledge-tab {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(244, 239, 226, 0.045);
+  color: var(--muted);
+  font-weight: 850;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.knowledge-tab:hover,
+.knowledge-tab.active {
+  border-color: rgba(66, 180, 168, 0.62);
+  background: rgba(66, 180, 168, 0.13);
+  color: var(--ink);
+}
+
+.knowledge-search-card {
+  max-width: 520px;
+}
+
+.bestiary-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.bestiary-card {
+  min-height: 260px;
+  display: grid;
+  grid-template-rows: 138px 1fr;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 226, 0.045);
+}
+
+.bestiary-card:hover {
+  border-color: rgba(66, 180, 168, 0.55);
+  background: rgba(66, 180, 168, 0.08);
+}
+
+.bestiary-card-image,
+.bestiary-creature-image {
+  display: grid;
+  place-items: center;
+  background-color: rgba(17, 16, 14, 0.48);
+  background-position: center;
+  background-size: cover;
+  color: rgba(214, 179, 104, 0.86);
+  font-family: var(--font-display);
+  font-size: 48px;
+}
+
+.bestiary-card-image {
+  border-bottom: 1px solid var(--line);
+}
+
+.bestiary-card-body {
+  display: grid;
+  gap: 12px;
+  align-content: space-between;
+  padding: 14px;
+}
+
+.bestiary-card-body strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 20px;
+}
+
+.bestiary-card-body span:not(.tag),
+.bestiary-card-body p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.bestiary-card-body p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.bestiary-book {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.88fr) minmax(0, 1.12fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.bestiary-book-page {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 520px;
+  padding: 18px;
+  border: 1px solid rgba(214, 179, 104, 0.28);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(244, 239, 226, 0.09), rgba(244, 239, 226, 0.035)),
+    rgba(17, 16, 14, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(244, 239, 226, 0.035);
+}
+
+.bestiary-book-image-page {
+  grid-template-rows: minmax(300px, 1fr) auto auto;
+}
+
+.bestiary-creature-image {
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.bestiary-title-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.6fr) minmax(190px, 0.55fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.bestiary-split-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bestiary-book textarea {
+  min-height: 150px;
+}
+
+.bestiary-split-notes textarea {
+  min-height: 128px;
+}
+
+.bestiary-stat-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.88fr) minmax(0, 1.12fr);
+  gap: 16px;
+}
+
 .market-detail-page {
   display: grid;
   gap: 16px;
@@ -3454,7 +3617,11 @@ ul {
   .market-detail-grid,
   .market-shop-grid,
   .market-shop-notes,
-  .market-shop-card-grid {
+  .market-shop-card-grid,
+  .bestiary-card-grid,
+  .bestiary-book,
+  .bestiary-title-grid,
+  .bestiary-stat-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3558,6 +3725,10 @@ ul {
     width: 100%;
     min-width: 0;
   }
+
+  .bestiary-book-page {
+    min-height: auto;
+  }
 }
 
 @media (max-width: 680px) {
@@ -3607,6 +3778,20 @@ ul {
 
   .table-row {
     grid-template-columns: 1fr;
+  }
+
+  .knowledge-search-card {
+    max-width: none;
+  }
+
+  .bestiary-split-notes,
+  .npc-status-grid,
+  .npc-attribute-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bestiary-creature-image {
+    min-height: 240px;
   }
 
   .sidebar {

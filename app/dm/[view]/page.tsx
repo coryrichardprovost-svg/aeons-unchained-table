@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ChroniclerClassesPage } from "@/components/chronicler-classes-page";
+import { ChroniclerKnowledgePage } from "@/components/chronicler-knowledge-page";
 import { ChroniclerMarketDashboard } from "@/components/chronicler-market-dashboard";
 import { ChroniclerNpcsPage } from "@/components/chronicler-npcs-page";
 import { ChroniclerWorldAtlasPage } from "@/components/chronicler-world-atlas-page";
@@ -28,6 +29,11 @@ const titles = {
     eyebrow: "NPC Forge",
     title: "People, Factions, and Met NPCs",
     copy: "Create NPCs quickly, track private Chronicler notes, and publish met NPCs into Trailblazer knowledge.",
+  },
+  knowledge: {
+    eyebrow: "Chronicler Knowledge",
+    title: "Bestiary, Lore, and Discoveries",
+    copy: "Build the private lore library for creatures, histories, discoveries, and player-facing knowledge.",
   },
   quests: {
     eyebrow: "Quest Ledger",
@@ -127,6 +133,8 @@ function DmContent({ view }: { view: DmView }) {
   if (view === "world") return <ChroniclerWorldAtlasPage />;
 
   if (view === "npcs") return <ChroniclerNpcsPage />;
+
+  if (view === "knowledge") return <ChroniclerKnowledgePage />;
 
   if (view === "quests") {
     return (
