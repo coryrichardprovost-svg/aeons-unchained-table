@@ -182,10 +182,28 @@ create table if not exists public.knowledge_entries (
   image_url text not null default '',
   summary text not null default '',
   details text not null default '',
+  strengths text not null default '',
+  weaknesses text not null default '',
   location_id uuid references public.world_locations(id) on delete set null,
   location_ids jsonb not null default '[]'::jsonb,
   environment text not null default '',
   rarity text not null default '',
+  status jsonb not null default '{
+    "health": "",
+    "stamina": "",
+    "mind": "",
+    "divinity": ""
+  }'::jsonb,
+  attributes jsonb not null default '{
+    "str": "10",
+    "spd": "10",
+    "int": "10",
+    "cha": "10",
+    "con": "10",
+    "dex": "10",
+    "wis": "10",
+    "fth": "10"
+  }'::jsonb,
   visibility text not null default 'chronicler' check (visibility in ('chronicler', 'hinted', 'discovered', 'players')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

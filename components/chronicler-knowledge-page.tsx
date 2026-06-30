@@ -36,6 +36,11 @@ type CreatureRecord = {
   visibility: "chronicler" | "players";
 };
 
+type CombatStatusKey = "health" | "stamina" | "mind" | "divinity";
+type CombatAttributeKey = "str" | "spd" | "int" | "cha" | "con" | "dex" | "wis" | "fth";
+type CombatStatus = Record<CombatStatusKey, string>;
+type CombatAttributes = Record<CombatAttributeKey, string>;
+
 type KnowledgeEntry = {
   id: string;
   owner_user_id: string | null;
@@ -46,10 +51,14 @@ type KnowledgeEntry = {
   image_url: string;
   summary: string;
   details: string;
+  strengths: string;
+  weaknesses: string;
   location_id: string | null;
   location_ids?: string[];
   environment: string;
   rarity: string;
+  status?: Partial<Record<CombatStatusKey, string | { current?: string; max?: string }>>;
+  attributes?: Partial<Record<CombatAttributeKey, string>>;
   visibility: "chronicler" | "hinted" | "discovered" | "players";
 };
 
@@ -137,6 +146,7 @@ export function ChroniclerKnowledgePage() {
   const isBestiaryCategory = activeCategory?.category_kind === "bestiary";
   const isFaunaCategory = activeCategoryName.toLowerCase() === "fauna";
   const isFloraCategory = activeCategoryName.toLowerCase() === "flora";
+  const isEnemyCategory = activeCategoryName.toLowerCase() === "enemies";
   const isNatureCategory = isFaunaCategory || isFloraCategory;
   const continents = useMemo(() => locations.filter((location) => location.location_type === "Continent" && !location.parent_location_id), [locations]);
   const regions = useMemo(() => locations.filter((location) => location.parent_location_id === continentId), [locations, continentId]);
@@ -222,6 +232,37 @@ export function ChroniclerKnowledgePage() {
 
     setEntries((current) => [data as KnowledgeEntry, ...current]);
     setMessage(`${activeCategory.name} entry created.`);
+  }
+
+  async function createEnemyEntry() {
+    if (!activeCategory) return;
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("knowledge_entries")
+      .insert({
+        owner_user_id: user?.id,
+        category_id: activeCategory.id,
+        category: activeCategory.name,
+        name: "New Enemy",
+        entry_type: "Enemy",
+        location_id: selectedLocationId || null,
+        location_ids: selectedLocationId ? [selectedLocationId] : [],
+        status: createBlankCombatStatus(),
+        attributes: createBlankCombatAttributes(),
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    router.push(`/dm/knowledge/enemies/${(data as { id: string }).id}`);
   }
 
   async function createNatureEntry() {
@@ -576,14 +617,16 @@ export function ChroniclerKnowledgePage() {
               <h3>{activeCategoryName}</h3>
               <p className="subcopy">{getKnowledgeCategoryCopy(activeCategoryName)}</p>
             </div>
-            <button className="primary-inline-button compact-action" onClick={isNatureCategory ? createNatureEntry : createKnowledgeEntry}>
+            <button className="primary-inline-button compact-action" onClick={isEnemyCategory ? createEnemyEntry : isNatureCategory ? createNatureEntry : createKnowledgeEntry}>
               New {activeCategoryName}
             </button>
           </div>
 
-          <div className={isNatureCategory ? "fauna-card-grid" : "knowledge-entry-grid"}>
+          <div className={isEnemyCategory ? "bestiary-card-grid" : isNatureCategory ? "fauna-card-grid" : "knowledge-entry-grid"}>
             {filteredEntries.map((entry) =>
-              isNatureCategory ? (
+              isEnemyCategory ? (
+                <EnemyCard entry={entry} locations={locations} key={entry.id} />
+              ) : isNatureCategory ? (
                 <NatureCard entry={entry} locations={locations} categoryName={activeCategoryName} key={entry.id} />
               ) : (
                 <KnowledgeEntryCard entry={entry} locations={locations} categoryName={activeCategoryName} onChange={updateEntry} onDelete={() => deleteEntry(entry.id)} key={entry.id} />
@@ -618,6 +661,26 @@ export function ChroniclerKnowledgePage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function EnemyCard({ entry, locations }: { entry: KnowledgeEntry; locations: WorldLocation[] }) {
+  return (
+    <article className="bestiary-card">
+      <Link className="bestiary-card-link" href={`/dm/knowledge/enemies/${entry.id}`}>
+        <div className="bestiary-card-image" style={entry.image_url ? { backgroundImage: `url(${entry.image_url})` } : undefined}>
+          {!entry.image_url ? entry.name.slice(0, 1).toUpperCase() : null}
+        </div>
+        <div className="bestiary-card-body">
+          <CombatCardStats name={entry.name} type={entry.entry_type || "Enemy"} status={entry.status} attributes={entry.attributes} />
+          <p>{entry.summary || entry.details || "No enemy description yet."}</p>
+          <div className="market-card-meta">
+            <span className="tag teal">{getKnowledgeEntryLocationLabel(entry, locations)}</span>
+            <span className="tag">{entry.visibility}</span>
+          </div>
+        </div>
+      </Link>
+    </article>
   );
 }
 
@@ -780,20 +843,34 @@ function KnowledgeEntryCard({
 }
 
 function CreatureCardStats({ creature }: { creature: CreatureRecord }) {
+  return <CombatCardStats name={creature.name} type={creature.creature_type || "Unknown creature type"} status={creature.status} attributes={creature.attributes} />;
+}
+
+function CombatCardStats({
+  name,
+  type,
+  status,
+  attributes,
+}: {
+  name: string;
+  type: string;
+  status?: Partial<Record<CombatStatusKey, string | { current?: string; max?: string }>>;
+  attributes?: Partial<Record<CombatAttributeKey, string>>;
+}) {
   const statusStats = [
-    ["Health", creature.status?.health],
-    ["Stamina", creature.status?.stamina],
-    ["Mind", creature.status?.mind],
-    ["Divinity", creature.status?.divinity],
+    ["Health", status?.health],
+    ["Stamina", status?.stamina],
+    ["Mind", status?.mind],
+    ["Divinity", status?.divinity],
   ] as const;
-  const attributes = ["str", "spd", "int", "cha", "con", "dex", "wis", "fth"] as const;
+  const attributeKeys = ["str", "spd", "int", "cha", "con", "dex", "wis", "fth"] as const;
 
   return (
     <div className="bestiary-card-stats">
       <div className="bestiary-card-summary-row">
         <div className="bestiary-card-title-block">
-          <strong>{creature.name}</strong>
-          <span>{creature.creature_type || "Unknown creature type"}</span>
+          <strong>{name}</strong>
+          <span>{type}</span>
         </div>
         <div className="bestiary-card-status-stack">
           {statusStats.map(([label, value]) => (
@@ -805,10 +882,10 @@ function CreatureCardStats({ creature }: { creature: CreatureRecord }) {
         </div>
       </div>
       <div className="bestiary-card-attribute-row">
-        {attributes.map((attribute) => (
+        {attributeKeys.map((attribute) => (
           <span key={attribute}>
             <strong>{attribute.toUpperCase()}</strong>
-            {creature.attributes?.[attribute] || "0"}
+            {attributes?.[attribute] || "0"}
           </span>
         ))}
       </div>
@@ -889,6 +966,7 @@ function getTypePlaceholder(categoryName: string) {
 function getKnowledgeCategoryCopy(categoryName: string) {
   if (categoryName === "Fauna") return "Wildlife, mundane animals, mounts, predators, and regional animal knowledge.";
   if (categoryName === "Flora") return "Plants, herbs, crops, poisons, reagents, and regional botanical knowledge.";
+  if (categoryName === "Enemies") return "Enemy records with combat status, attributes, origin areas, strengths, weaknesses, and field notes.";
   return "Area-linked lore entries for this knowledge category.";
 }
 
@@ -922,6 +1000,28 @@ function setKnowledgeTabUrl(categoryName: string) {
 
 function getTabSlug(value: string) {
   return value.trim().toLowerCase();
+}
+
+function createBlankCombatStatus(): CombatStatus {
+  return {
+    health: "",
+    stamina: "",
+    mind: "",
+    divinity: "",
+  };
+}
+
+function createBlankCombatAttributes(): CombatAttributes {
+  return {
+    str: "10",
+    spd: "10",
+    int: "10",
+    cha: "10",
+    con: "10",
+    dex: "10",
+    wis: "10",
+    fth: "10",
+  };
 }
 
 function formatStatusValue(value: string | { current?: string; max?: string } | undefined) {
