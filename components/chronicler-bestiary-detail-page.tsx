@@ -13,7 +13,7 @@ type WorldLocation = {
 
 type CreatureStatusKey = "health" | "stamina" | "mind" | "divinity";
 type CreatureAttributeKey = "str" | "spd" | "int" | "cha" | "con" | "dex" | "wis" | "fth";
-type CreatureStatus = Record<CreatureStatusKey, { current: string; max: string }>;
+type CreatureStatus = Record<CreatureStatusKey, string>;
 type CreatureAttributes = Record<CreatureAttributeKey, string>;
 
 type CreatureRecord = {
@@ -114,17 +114,14 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
     setCreature((current) => (current ? { ...current, ...patch } : current));
   }
 
-  function updateStatus(statusKey: CreatureStatusKey, field: "current" | "max", value: string) {
+  function updateStatus(statusKey: CreatureStatusKey, value: string) {
     setCreature((current) =>
       current
         ? {
             ...current,
             status: {
               ...current.status,
-              [statusKey]: {
-                ...current.status[statusKey],
-                [field]: value,
-              },
+              [statusKey]: value,
             },
           }
         : current,
@@ -241,12 +238,8 @@ export function ChroniclerBestiaryDetailPage({ creatureId }: { creatureId: strin
               <div className="npc-status-box" key={statusKey}>
                 <strong>{formatLabel(statusKey)}</strong>
                 <label>
-                  <span>Current</span>
-                  <input value={creature.status[statusKey].current} onChange={(event) => updateStatus(statusKey, "current", event.target.value)} />
-                </label>
-                <label>
-                  <span>Max</span>
-                  <input value={creature.status[statusKey].max} onChange={(event) => updateStatus(statusKey, "max", event.target.value)} />
+                  <span>{formatLabel(statusKey)}</span>
+                  <input value={creature.status[statusKey]} onChange={(event) => updateStatus(statusKey, event.target.value)} />
                 </label>
               </div>
             ))}
@@ -300,10 +293,7 @@ function normalizeCreature(creature: Partial<CreatureRecord> & { id: string }): 
     origin_location_id: creature.origin_location_id || null,
     strengths: creature.strengths || "",
     weaknesses: creature.weaknesses || "",
-    status: {
-      ...createBlankStatus(),
-      ...creature.status,
-    },
+    status: normalizeStatus(creature.status),
     attributes: {
       ...createBlankAttributes(),
       ...creature.attributes,
@@ -314,11 +304,29 @@ function normalizeCreature(creature: Partial<CreatureRecord> & { id: string }): 
 
 function createBlankStatus(): CreatureStatus {
   return {
-    health: { current: "", max: "" },
-    stamina: { current: "", max: "" },
-    mind: { current: "", max: "" },
-    divinity: { current: "", max: "" },
+    health: "",
+    stamina: "",
+    mind: "",
+    divinity: "",
   };
+}
+
+function normalizeStatus(status: unknown): CreatureStatus {
+  const blankStatus = createBlankStatus();
+  if (!status || typeof status !== "object") return blankStatus;
+
+  const statusRecord = status as Partial<Record<CreatureStatusKey, string | { current?: string; max?: string }>>;
+  return {
+    health: getStatusValue(statusRecord.health),
+    stamina: getStatusValue(statusRecord.stamina),
+    mind: getStatusValue(statusRecord.mind),
+    divinity: getStatusValue(statusRecord.divinity),
+  };
+}
+
+function getStatusValue(value: string | { current?: string; max?: string } | undefined) {
+  if (typeof value === "string") return value;
+  return value?.current || value?.max || "";
 }
 
 function createBlankAttributes(): CreatureAttributes {

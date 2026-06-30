@@ -1528,8 +1528,9 @@ h1 {
 
 .bestiary-card-body {
   display: grid;
-  gap: 12px;
-  align-content: space-between;
+  grid-template-rows: auto minmax(54px, auto) auto;
+  gap: 10px;
+  align-content: start;
   padding: 14px;
 }
 
@@ -1557,34 +1558,73 @@ h1 {
   gap: 8px;
 }
 
-.bestiary-card-status-row,
+.bestiary-card-summary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(118px, 0.52fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.bestiary-card-title-block {
+  min-width: 0;
+}
+
+.bestiary-card-title-block strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 20px;
+}
+
+.bestiary-card-title-block span {
+  color: var(--muted);
+}
+
+.bestiary-card-status-stack {
+  display: grid;
+  gap: 4px;
+}
+
+.bestiary-card-status-stack span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid rgba(244, 239, 226, 0.11);
+  border-radius: 5px;
+  background: rgba(17, 16, 14, 0.28);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.bestiary-card-status-stack strong {
+  margin: 0;
+  color: var(--gold);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
 .bestiary-card-attribute-row {
   display: grid;
-  gap: 5px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px;
 }
 
-.bestiary-card-status-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.bestiary-card-attribute-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.bestiary-card-stats span {
+.bestiary-card-attribute-row span {
   display: grid;
   gap: 2px;
   min-width: 0;
-  padding: 6px;
+  padding: 5px 3px;
   border: 1px solid rgba(244, 239, 226, 0.11);
-  border-radius: 6px;
+  border-radius: 5px;
   background: rgba(17, 16, 14, 0.28);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 11px;
   text-align: center;
 }
 
-.bestiary-card-stats strong {
+.bestiary-card-attribute-row strong {
   margin: 0;
   color: var(--gold);
   font-size: 10px;

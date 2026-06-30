@@ -30,7 +30,7 @@ type CreatureRecord = {
   origin_location_id: string | null;
   strengths: string;
   weaknesses: string;
-  status: Partial<Record<"health" | "stamina" | "mind" | "divinity", { current?: string; max?: string }>>;
+  status: Partial<Record<"health" | "stamina" | "mind" | "divinity", string | { current?: string; max?: string }>>;
   attributes: Partial<Record<"str" | "spd" | "int" | "cha" | "con" | "dex" | "wis" | "fth", string>>;
   visibility: "chronicler" | "players";
 };
@@ -486,12 +486,8 @@ export function ChroniclerKnowledgePage() {
                     {!creature.image_url ? creature.name.slice(0, 1).toUpperCase() : null}
                   </div>
                   <div className="bestiary-card-body">
-                    <div>
-                      <strong>{creature.name}</strong>
-                      <span>{creature.creature_type || "Unknown creature type"}</span>
-                    </div>
-                    <p>{creature.description || "No creature description yet."}</p>
                     <CreatureCardStats creature={creature} />
+                    <p>{creature.description || "No creature description yet."}</p>
                     <div className="market-card-meta">
                       <span className="tag teal">{getLocationLabel(creature.origin_location_id, locations)}</span>
                       <span className="tag">{creature.visibility}</span>
@@ -689,18 +685,25 @@ function CreatureCardStats({ creature }: { creature: CreatureRecord }) {
     ["Health", creature.status?.health],
     ["Stamina", creature.status?.stamina],
     ["Mind", creature.status?.mind],
+    ["Divinity", creature.status?.divinity],
   ] as const;
   const attributes = ["str", "spd", "int", "cha", "con", "dex", "wis", "fth"] as const;
 
   return (
     <div className="bestiary-card-stats">
-      <div className="bestiary-card-status-row">
-        {statusStats.map(([label, value]) => (
-          <span key={label}>
-            <strong>{label.slice(0, 3).toUpperCase()}</strong>
-            {formatStatusValue(value)}
-          </span>
-        ))}
+      <div className="bestiary-card-summary-row">
+        <div className="bestiary-card-title-block">
+          <strong>{creature.name}</strong>
+          <span>{creature.creature_type || "Unknown creature type"}</span>
+        </div>
+        <div className="bestiary-card-status-stack">
+          {statusStats.map(([label, value]) => (
+            <span key={label}>
+              <strong>{label}:</strong>
+              {formatStatusValue(value)}
+            </span>
+          ))}
+        </div>
       </div>
       <div className="bestiary-card-attribute-row">
         {attributes.map((attribute) => (
@@ -766,8 +769,7 @@ function getDeleteDialogCopy(pendingDelete: NonNullable<PendingDelete>) {
   return "This will permanently remove this Knowledge tab and delete the entries stored inside it.";
 }
 
-function formatStatusValue(value: { current?: string; max?: string } | undefined) {
-  const current = value?.current || "0";
-  const max = value?.max || "0";
-  return `${current}/${max}`;
+function formatStatusValue(value: string | { current?: string; max?: string } | undefined) {
+  if (typeof value === "string") return value || "0";
+  return value?.current || value?.max || "0";
 }
