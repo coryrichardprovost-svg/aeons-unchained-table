@@ -55,6 +55,7 @@ type AtlasFauna = {
 type AtlasFlora = AtlasFauna;
 type AtlasFaction = AtlasFauna;
 type AtlasHistory = AtlasFauna;
+type AtlasCulture = AtlasFauna;
 
 const locationTypes = ["Continent", "Region", "City", "Town", "Village", "District", "Landmark", "Wilderness", "Dungeon", "Building", "Point of Interest"];
 
@@ -67,6 +68,7 @@ export function ChroniclerWorldAtlasPage() {
   const [flora, setFlora] = useState<AtlasFlora[]>([]);
   const [factions, setFactions] = useState<AtlasFaction[]>([]);
   const [histories, setHistories] = useState<AtlasHistory[]>([]);
+  const [cultures, setCultures] = useState<AtlasCulture[]>([]);
   const [continentId, setContinentId] = useState("");
   const [regionId, setRegionId] = useState("");
   const [placeId, setPlaceId] = useState("");
@@ -119,6 +121,7 @@ export function ChroniclerWorldAtlasPage() {
       { data: floraData, error: floraError },
       { data: factionData, error: factionError },
       { data: historyData, error: historyError },
+      { data: cultureData, error: cultureError },
     ] = await Promise.all([
       supabase.from("world_locations").select("*").order("name", { ascending: true }),
       supabase.from("npcs").select("id,name,location_id,faction,organization").order("name", { ascending: true }),
@@ -128,6 +131,7 @@ export function ChroniclerWorldAtlasPage() {
       supabase.from("knowledge_entries").select("id,name,entry_type,location_id,location_ids,category").eq("category", "Flora").order("name", { ascending: true }),
       supabase.from("knowledge_entries").select("id,name,entry_type,location_id,location_ids,category").eq("category", "Factions").order("name", { ascending: true }),
       supabase.from("knowledge_entries").select("id,name,entry_type,location_id,location_ids,category").eq("category", "History").order("name", { ascending: true }),
+      supabase.from("knowledge_entries").select("id,name,entry_type,location_id,location_ids,category").eq("category", "Cultures").order("name", { ascending: true }),
     ]);
 
     if (locationError) {
@@ -168,6 +172,10 @@ export function ChroniclerWorldAtlasPage() {
       setMessage(historyError.message.includes("location_ids") ? "Run supabase/migrations/022_add_knowledge_entry_multiple_locations.sql in Supabase SQL Editor." : historyError.message);
     }
 
+    if (cultureError) {
+      setMessage(cultureError.message.includes("location_ids") ? "Run supabase/migrations/022_add_knowledge_entry_multiple_locations.sql in Supabase SQL Editor." : cultureError.message);
+    }
+
     setLocations((locationData || []) as WorldLocation[]);
     setNpcs((npcData || []) as AtlasNpc[]);
     setMarkets((marketData || []) as AtlasMarket[]);
@@ -176,6 +184,7 @@ export function ChroniclerWorldAtlasPage() {
     setFlora((floraData || []) as AtlasFlora[]);
     setFactions((factionData || []) as AtlasFaction[]);
     setHistories((historyData || []) as AtlasHistory[]);
+    setCultures((cultureData || []) as AtlasCulture[]);
     setIsLoading(false);
   }, []);
 
@@ -399,7 +408,19 @@ export function ChroniclerWorldAtlasPage() {
           <span className="tag gold">{selectedLocation?.location_type || "No area selected"}</span>
         </div>
         {selectedLocation ? (
-          <AtlasAreaSummary location={selectedLocation} locations={locations} npcs={npcs} markets={markets} creatures={creatures} fauna={fauna} flora={flora} factions={factions} histories={histories} onSelect={selectLocation} />
+          <AtlasAreaSummary
+            location={selectedLocation}
+            locations={locations}
+            npcs={npcs}
+            markets={markets}
+            creatures={creatures}
+            fauna={fauna}
+            flora={flora}
+            factions={factions}
+            histories={histories}
+            cultures={cultures}
+            onSelect={selectLocation}
+          />
         ) : (
           <p className="subcopy">Choose a continent, region, place, or specific location to view its information.</p>
         )}
@@ -490,6 +511,7 @@ function AtlasAreaSummary({
   flora,
   factions,
   histories,
+  cultures,
   onSelect,
 }: {
   location: WorldLocation;
@@ -501,6 +523,7 @@ function AtlasAreaSummary({
   flora: AtlasFlora[];
   factions: AtlasFaction[];
   histories: AtlasHistory[];
+  cultures: AtlasCulture[];
   onSelect: (location: WorldLocation) => void;
 }) {
   const childLocations = getChildLocations(location.id, locations);
@@ -514,6 +537,7 @@ function AtlasAreaSummary({
   const locationFlora = flora.filter((entry) => getKnowledgeEntryLocationIds(entry).some((locationId) => branchIds.includes(locationId)));
   const locationFactions = factions.filter((entry) => getKnowledgeEntryLocationIds(entry).some((locationId) => branchIds.includes(locationId)));
   const locationHistories = histories.filter((entry) => getKnowledgeEntryLocationIds(entry).some((locationId) => branchIds.includes(locationId)));
+  const locationCultures = cultures.filter((entry) => getKnowledgeEntryLocationIds(entry).some((locationId) => branchIds.includes(locationId)));
 
   return (
     <div className="atlas-area-summary">
@@ -623,6 +647,22 @@ function AtlasAreaSummary({
             </Link>
           ))}
           {locationHistories.length === 0 ? <p className="subcopy">No histories are connected to this area or its nested areas yet.</p> : null}
+        </div>
+      </section>
+
+      <section className="atlas-summary-block">
+        <div className="list-header">
+          <h3>Cultures In This Area</h3>
+          <span className="tag gold">{locationCultures.length}</span>
+        </div>
+        <div className="atlas-npc-list">
+          {locationCultures.map((entry) => (
+            <Link href={`/dm/knowledge/cultures/${entry.id}`} className="atlas-npc-chip" key={entry.id}>
+              <strong>{entry.name}</strong>
+              <span>{entry.entry_type || "Culture"}</span>
+            </Link>
+          ))}
+          {locationCultures.length === 0 ? <p className="subcopy">No cultures are connected to this area or its nested areas yet.</p> : null}
         </div>
       </section>
 

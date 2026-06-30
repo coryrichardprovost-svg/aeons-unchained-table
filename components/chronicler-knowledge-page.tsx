@@ -149,6 +149,7 @@ export function ChroniclerKnowledgePage() {
   const isEnemyCategory = activeCategoryName.toLowerCase() === "enemies";
   const isFactionCategory = activeCategoryName.toLowerCase() === "factions";
   const isHistoryCategory = activeCategoryName.toLowerCase() === "history";
+  const isCultureCategory = activeCategoryName.toLowerCase() === "cultures";
   const isNatureCategory = isFaunaCategory || isFloraCategory;
   const continents = useMemo(() => locations.filter((location) => location.location_type === "Continent" && !location.parent_location_id), [locations]);
   const regions = useMemo(() => locations.filter((location) => location.parent_location_id === continentId), [locations, continentId]);
@@ -327,6 +328,37 @@ export function ChroniclerKnowledgePage() {
     }
 
     router.push(`/dm/knowledge/history/${(data as { id: string }).id}`);
+  }
+
+  async function createCultureEntry() {
+    if (!activeCategory) return;
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from("knowledge_entries")
+      .insert({
+        owner_user_id: user?.id,
+        category_id: activeCategory.id,
+        category: activeCategory.name,
+        name: "New Culture",
+        entry_type: "Culture",
+        location_id: selectedLocationId || null,
+        location_ids: selectedLocationId ? [selectedLocationId] : [],
+        environment: "Language unset",
+        rarity: "Traditions unset",
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    router.push(`/dm/knowledge/cultures/${(data as { id: string }).id}`);
   }
 
   async function createNatureEntry() {
@@ -683,15 +715,43 @@ export function ChroniclerKnowledgePage() {
             </div>
             <button
               className="primary-inline-button compact-action"
-              onClick={isHistoryCategory ? createHistoryEntry : isFactionCategory ? createFactionEntry : isEnemyCategory ? createEnemyEntry : isNatureCategory ? createNatureEntry : createKnowledgeEntry}
+              onClick={
+                isCultureCategory
+                  ? createCultureEntry
+                  : isHistoryCategory
+                    ? createHistoryEntry
+                    : isFactionCategory
+                      ? createFactionEntry
+                      : isEnemyCategory
+                        ? createEnemyEntry
+                        : isNatureCategory
+                          ? createNatureEntry
+                          : createKnowledgeEntry
+              }
             >
-              {isHistoryCategory ? "New Chronicle" : `New ${activeCategoryName}`}
+              {isCultureCategory ? "New Culture" : isHistoryCategory ? "New Chronicle" : `New ${activeCategoryName}`}
             </button>
           </div>
 
-          <div className={isHistoryCategory ? "history-card-grid" : isFactionCategory ? "faction-card-grid" : isEnemyCategory ? "bestiary-card-grid" : isNatureCategory ? "fauna-card-grid" : "knowledge-entry-grid"}>
+          <div
+            className={
+              isCultureCategory
+                ? "culture-card-grid"
+                : isHistoryCategory
+                  ? "history-card-grid"
+                  : isFactionCategory
+                    ? "faction-card-grid"
+                    : isEnemyCategory
+                      ? "bestiary-card-grid"
+                      : isNatureCategory
+                        ? "fauna-card-grid"
+                        : "knowledge-entry-grid"
+            }
+          >
             {filteredEntries.map((entry) =>
-              isHistoryCategory ? (
+              isCultureCategory ? (
+                <CultureCard entry={entry} locations={locations} key={entry.id} />
+              ) : isHistoryCategory ? (
                 <HistoryCard entry={entry} locations={locations} key={entry.id} />
               ) : isFactionCategory ? (
                 <FactionCard entry={entry} locations={locations} key={entry.id} />
@@ -732,6 +792,35 @@ export function ChroniclerKnowledgePage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function CultureCard({ entry, locations }: { entry: KnowledgeEntry; locations: WorldLocation[] }) {
+  return (
+    <article className="culture-card">
+      <Link className="culture-card-link" href={`/dm/knowledge/cultures/${entry.id}`}>
+        <div className="culture-card-banner" style={entry.image_url ? { backgroundImage: `url(${entry.image_url})` } : undefined}>
+          {!entry.image_url ? entry.name.slice(0, 1).toUpperCase() : null}
+        </div>
+        <div className="culture-card-body">
+          <div className="culture-card-heading">
+            <div>
+              <strong>{entry.name}</strong>
+              <span>{entry.entry_type || "Culture"}</span>
+            </div>
+            <div className="culture-card-tags">
+              <span>{entry.environment || "No language set"}</span>
+              <span>{entry.rarity || "No tradition set"}</span>
+            </div>
+          </div>
+          <p>{entry.summary || entry.details || "No cultural notes yet."}</p>
+          <div className="market-card-meta">
+            <span className="tag teal">{getKnowledgeEntryLocationLabel(entry, locations)}</span>
+            <span className="tag">{entry.visibility}</span>
+          </div>
+        </div>
+      </Link>
+    </article>
   );
 }
 
@@ -1093,6 +1182,7 @@ function getKnowledgeCategoryCopy(categoryName: string) {
   if (categoryName === "Enemies") return "Enemy records with combat status, attributes, origin areas, strengths, weaknesses, and field notes.";
   if (categoryName === "Factions") return "Political powers, guilds, cults, houses, churches, syndicates, and hidden organizations.";
   if (categoryName === "History") return "A Chronicle Library for eras, realms, wars, legends, kingdoms, disasters, and long-form world history.";
+  if (categoryName === "Cultures") return "Customs, languages, laws, beliefs, taboos, holidays, traditions, and the ways people live.";
   return "Area-linked lore entries for this knowledge category.";
 }
 
