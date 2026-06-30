@@ -34,6 +34,7 @@ export function ChroniclerMarketDashboard() {
   const [shops, setShops] = useState<ShopRecord[]>([]);
   const [locations, setLocations] = useState<WorldLocation[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<MarketRecord | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -100,6 +101,23 @@ export function ChroniclerMarketDashboard() {
     router.push(`/dm/market/${(data as { id: string }).id}`);
   }
 
+  async function deleteMarket(market: MarketRecord) {
+    const supabase = createClient();
+    setMessage(`Deleting ${market.name || "market"}...`);
+
+    const { error } = await supabase.from("markets").delete().eq("id", market.id);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setMarkets((current) => current.filter((candidate) => candidate.id !== market.id));
+    setShops((current) => current.filter((shop) => shop.market_id !== market.id));
+    setDeleteTarget(null);
+    setMessage("Market deleted.");
+  }
+
   return (
     <div className="market-dashboard">
       {message ? <p className="form-message">{message}</p> : null}
@@ -135,18 +153,28 @@ export function ChroniclerMarketDashboard() {
 
       <section className="market-card-grid">
         {filteredMarkets.map((market) => (
-          <Link className="market-card" href={`/dm/market/${market.id}`} key={market.id}>
-            <div>
-              <strong>{market.name}</strong>
-              <span>{getLocationLabel(market.location_id, locations)}</span>
-            </div>
-            <p>{market.description || "No market description yet."}</p>
+          <article className="market-card" key={market.id}>
+            <Link href={`/dm/market/${market.id}`}>
+              <div>
+                <strong>{market.name}</strong>
+                <span>{getLocationLabel(market.location_id, locations)}</span>
+              </div>
+              <p>{market.description || "No market description yet."}</p>
+            </Link>
             <div className="market-card-meta">
               <span className="tag teal">{market.market_type || "Market"}</span>
               <span className="tag gold">{shops.filter((shop) => shop.market_id === market.id).length} shops</span>
               <span className="tag">{market.visibility}</span>
             </div>
-          </Link>
+            <div className="market-shop-footer">
+              <Link className="secondary-button compact-action" href={`/dm/market/${market.id}`}>
+                Open Market
+              </Link>
+              <button className="market-delete-type-button" onClick={() => setDeleteTarget(market)}>
+                Delete Market
+              </button>
+            </div>
+          </article>
         ))}
 
         {!isLoading && filteredMarkets.length === 0 ? (
@@ -156,6 +184,27 @@ export function ChroniclerMarketDashboard() {
           </div>
         ) : null}
       </section>
+
+      {deleteTarget ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-market-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">Markets</p>
+            <h3 id="delete-market-title">Delete this market?</h3>
+            <p className="subcopy">
+              This will delete {deleteTarget.name} and its {shops.filter((shop) => shop.market_id === deleteTarget.id).length} shop
+              {shops.filter((shop) => shop.market_id === deleteTarget.id).length === 1 ? "" : "s"}.
+            </p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button className="primary-inline-button" onClick={() => deleteMarket(deleteTarget)}>
+                Delete Market
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

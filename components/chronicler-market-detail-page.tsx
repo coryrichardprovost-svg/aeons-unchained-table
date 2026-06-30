@@ -47,6 +47,7 @@ export function ChroniclerMarketDetailPage({ marketId }: { marketId: string }) {
   const [shops, setShops] = useState<ShopRecord[]>([]);
   const [shopStock, setShopStock] = useState<ShopStockRecord[]>([]);
   const [locations, setLocations] = useState<WorldLocation[]>([]);
+  const [deleteShopTarget, setDeleteShopTarget] = useState<ShopRecord | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const hasLoadedMarketAutoSave = useRef(false);
@@ -164,6 +165,7 @@ export function ChroniclerMarketDetailPage({ marketId }: { marketId: string }) {
 
     setShops((current) => current.filter((candidate) => candidate.id !== shop.id));
     setShopStock((current) => current.filter((stock) => stock.shop_id !== shop.id));
+    setDeleteShopTarget(null);
     setMessage("Shop deleted.");
   }
 
@@ -247,7 +249,7 @@ export function ChroniclerMarketDetailPage({ marketId }: { marketId: string }) {
                 <Link className="secondary-button compact-action" href={`/dm/market/${market.id}/shops/${shop.id}`}>
                   Open Shop
                 </Link>
-                <button className="market-delete-type-button" onClick={() => deleteShop(shop)}>
+                <button className="market-delete-type-button" onClick={() => setDeleteShopTarget(shop)}>
                   Delete Shop
                 </button>
               </div>
@@ -262,6 +264,27 @@ export function ChroniclerMarketDetailPage({ marketId }: { marketId: string }) {
           ) : null}
         </div>
       </section>
+
+      {deleteShopTarget ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-shop-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">Markets</p>
+            <h3 id="delete-shop-title">Delete this shop?</h3>
+            <p className="subcopy">
+              This will delete {deleteShopTarget.name} and its {shopStock.filter((stock) => stock.shop_id === deleteShopTarget.id).length} stock row
+              {shopStock.filter((stock) => stock.shop_id === deleteShopTarget.id).length === 1 ? "" : "s"}.
+            </p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteShopTarget(null)}>
+                Cancel
+              </button>
+              <button className="primary-inline-button" onClick={() => deleteShop(deleteShopTarget)}>
+                Delete Shop
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

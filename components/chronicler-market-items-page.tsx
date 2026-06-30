@@ -44,6 +44,8 @@ export function ChroniclerMarketItemsPage() {
   const [items, setItems] = useState<ItemRecord[]>([]);
   const [activeTypeId, setActiveTypeId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteItemTarget, setDeleteItemTarget] = useState<ItemRecord | null>(null);
+  const [deleteTypeTarget, setDeleteTypeTarget] = useState<ItemTypeRecord | null>(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const itemSaveTimers = useRef<Record<string, number>>({});
@@ -163,6 +165,7 @@ export function ChroniclerMarketItemsPage() {
 
     window.clearTimeout(itemSaveTimers.current[item.id]);
     setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+    setDeleteItemTarget(null);
     setMessage("Item deleted.");
   }
 
@@ -185,6 +188,7 @@ export function ChroniclerMarketItemsPage() {
     setItems((current) => current.filter((item) => item.item_type_id !== itemType.id));
     setActiveTypeId(remainingTypes[0]?.id || "");
     setSearchTerm("");
+    setDeleteTypeTarget(null);
     setMessage("Item type deleted.");
   }
 
@@ -292,7 +296,7 @@ export function ChroniclerMarketItemsPage() {
                     <span>Custom Type Name</span>
                     <input value={activeType.name} onChange={(event) => updateTypeName(activeType.id, event.target.value)} />
                   </label>
-                  <button className="market-delete-type-button" onClick={() => deleteItemType(activeType)}>
+                  <button className="market-delete-type-button" onClick={() => setDeleteTypeTarget(activeType)}>
                     Delete Table
                   </button>
                 </div>
@@ -334,7 +338,7 @@ export function ChroniclerMarketItemsPage() {
                       />
                     ),
                   )}
-                  <button className="market-delete-row-button" onClick={() => deleteItem(item)} aria-label={`Delete ${item.name || "item"}`}>
+                  <button className="market-delete-row-button" onClick={() => setDeleteItemTarget(item)} aria-label={`Delete ${item.name || "item"}`}>
                     Delete
                   </button>
                 </div>
@@ -355,6 +359,45 @@ export function ChroniclerMarketItemsPage() {
         <div className="empty-state">
           <strong>No item types found.</strong>
           <span>Run the market items migration, then return here.</span>
+        </div>
+      ) : null}
+
+      {deleteItemTarget ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-item-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">Item Database</p>
+            <h3 id="delete-item-title">Delete this item?</h3>
+            <p className="subcopy">This will delete {deleteItemTarget.name || "this item"} from the item database.</p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteItemTarget(null)}>
+                Cancel
+              </button>
+              <button className="primary-inline-button" onClick={() => deleteItem(deleteItemTarget)}>
+                Delete Item
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {deleteTypeTarget ? (
+        <div className="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-item-type-title">
+          <section className="confirm-dialog">
+            <p className="eyebrow">Item Database</p>
+            <h3 id="delete-item-type-title">Delete this table?</h3>
+            <p className="subcopy">
+              This will delete {deleteTypeTarget.name} and {items.filter((item) => item.item_type_id === deleteTypeTarget.id).length} item
+              {items.filter((item) => item.item_type_id === deleteTypeTarget.id).length === 1 ? "" : "s"} inside it.
+            </p>
+            <div className="confirm-actions">
+              <button className="secondary-button" onClick={() => setDeleteTypeTarget(null)}>
+                Cancel
+              </button>
+              <button className="primary-inline-button" onClick={() => deleteItemType(deleteTypeTarget)}>
+                Delete Table
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </div>
